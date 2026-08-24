@@ -14,6 +14,18 @@ docker compose up -d --build
 
 4. Öppna `http://SERVERNS-IP:3000`.
 
+## Första administratören
+
+Kopiera `.env.example` till `.env`, byt adminlösenordet och starta sedan containern:
+
+```bash
+cp .env.example .env
+nano .env
+docker compose up -d --build
+```
+
+Logga in med `ADMIN_EMAIL` och `ADMIN_PASSWORD`. Adminrollen skapas automatiskt om kontot saknas. Öppna sedan **Admin** i menyn för att göra andra konton till administratörer eller vanliga användare. `.env` ska aldrig läggas upp på GitHub.
+
 Vid vanlig HTTP i hemnätet ska `SECURE_COOKIES` vara `false`. När du lägger sidan bakom HTTPS ändrar du den till `true` och kör om containern.
 
 Databasen sparas i Docker-volymen `formkurva_data` och överlever omstart eller uppdatering av containern.

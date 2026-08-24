@@ -32,6 +32,18 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions(expires_at);
   CREATE INDEX IF NOT EXISTS measurements_user_date_idx ON measurements(user_id, date);
 `);
+try { db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'"); } catch (error) { if (!error.message.includes('duplicate column name')) throw error; }
+
+function ensureBootstrapAdmin() {
+  const email = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  const password = String(process.env.ADMIN_PASSWORD || '');
+  if (!email || password.length < 8) return;
+  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+  if (existing) { db.prepare("UPDATE users SET role = 'admin' WHERE id = ?").run(existing.id); return; }
+  const { salt, hash } = hashPassword(password);
+  db.prepare("INSERT INTO users (email, password_hash, password_salt, role) VALUES (?, ?, ?, 'admin')").run(email, hash, salt);
+}
+ensureBootstrapAdmin();
 
 app.use(express.json({ limit: '8mb' }));
 app.use(express.static(path.join(__dirname), { index: 'MyHome.html' }));
@@ -62,7 +74,11 @@ function requireUser(req, res, next) {
   if (!user) return res.status(401).json({ error: 'Du måste vara inloggad.' });
   req.user = user; next();
 }
-function publicUser(user) { return { id: user.id, email: user.email, profile: JSON.parse(user.profile_json || '{}') }; }
+function requireAdmin(req, res, next) {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Administratörsbehörighet krävs.' });
+  next();
+}
+function publicUser(user) { return { id: user.id, email: user.email, role: user.role || 'user', profile: JSON.parse(user.profile_json || '{}') }; }
 function validMeasurement(data) {
   if (!data || !/^\d{4}-\d{2}-\d{2}$/.test(data.date)) return false;
   return ['weight', 'waist', 'chest', 'arm', 'thigh', 'hip'].some(key => data[key] !== '' && data[key] !== undefined && Number(data[key]) >= 0);
@@ -88,5 +104,17 @@ app.post('/api/measurements', requireUser, (req, res) => { if (!validMeasurement
 app.delete('/api/measurements/:id', requireUser, (req, res) => { db.prepare('DELETE FROM measurements WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id); res.status(204).end(); });
 app.put('/api/profile', requireUser, (req, res) => { const profile = { ...req.body }; delete profile.email; db.prepare('UPDATE users SET profile_json = ? WHERE id = ?').run(JSON.stringify(profile), req.user.id); res.json({ profile }); });
 app.delete('/api/account', requireUser, (req, res) => { db.prepare('DELETE FROM users WHERE id = ?').run(req.user.id); res.setHeader('Set-Cookie', 'formkurva_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'); res.status(204).end(); });
+app.get('/api/admin/users', requireUser, requireAdmin, (req, res) => res.json({ users: db.prepare('SELECT id, email, role, created_at FROM users ORDER BY created_at ASC').all() }));
+app.patch('/api/admin/users/:id/role', requireUser, requireAdmin, (req, res) => {
+  const role = req.body.role === 'admin' ? 'admin' : req.body.role === 'user' ? 'user' : '';
+  const userId = Number(req.params.id);
+  if (!role || !Number.isInteger(userId)) return res.status(400).json({ error: 'Ogiltig roll.' });
+  if (userId === req.user.id && role !== 'admin') return res.status(400).json({ error: 'Du kan inte ta bort adminrollen från dig själv.' });
+  const target = db.prepare('SELECT id, email, role FROM users WHERE id = ?').get(userId);
+  if (!target) return res.status(404).json({ error: 'Kontot hittades inte.' });
+  if (target.role === 'admin' && role === 'user' && db.prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'admin'").get().count <= 1) return res.status(400).json({ error: 'Det måste alltid finnas minst en administratör.' });
+  db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, userId);
+  res.json({ id: target.id, email: target.email, role });
+});
 app.use((error, req, res, next) => { console.error(error); res.status(500).json({ error: 'Ett oväntat serverfel uppstod.' }); });
 app.listen(port, () => console.log(`Formkurva kör på http://localhost:${port}`));
