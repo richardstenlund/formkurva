@@ -1,0 +1,5 @@
+# Exempel för HTTPS framför Formkurva.
+# Byt ut formkurva.example.com mot din domän.
+formkurva.example.com {
+    reverse_proxy 127.0.0.1:3000
+}

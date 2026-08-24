@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Formkurva | Din utveckling</title>
+	<style>
+		@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+		:root {
+			--ink: #17221d;
+			--muted: #6f7d76;
+			--paper: #f5f6f1;
+			--white: #ffffff;
+			--line: #dfe5dd;
+			--green: #1c5b48;
+			--green-dark: #123e32;
+			--mint: #dcece1;
+			--orange: #e47a40;
+			--yellow: #f2cf65;
+			--shadow: 0 18px 45px rgba(30, 57, 43, 0.08);
+		}
+
+		* { box-sizing: border-box; }
+		body { margin: 0; background: var(--paper); color: var(--ink); font-family: 'DM Sans', sans-serif; }
+		button, input { font: inherit; }
+		button { cursor: pointer; }
+		.app-shell { display: grid; grid-template-columns: 250px 1fr; min-width: 0; min-height: 100vh; }
+		.sidebar { display: flex; flex-direction: column; min-width: 0; overflow: hidden; padding: 30px 20px; background: var(--green-dark); color: #eff7ef; }
+		.brand { display: flex; align-items: center; gap: 11px; padding: 0 12px 47px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; }
+		.brand-mark { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 9px; background: var(--yellow); color: var(--green-dark); font-size: 18px; }
+		.nav-label { margin: 0 12px 10px; color: #91aea1; text-transform: uppercase; letter-spacing: .12em; font-size: 10px; font-weight: 700; }
+		nav { display: grid; min-width: 0; gap: 7px; }
+		.nav-item { display: flex; align-items: center; gap: 12px; padding: 12px; border: 0; border-radius: 9px; background: transparent; color: #b7cabe; text-align: left; font-size: 14px; }
+		.nav-item.active, .nav-item:hover { background: rgba(255,255,255,.1); color: white; }
+		.nav-icon { width: 20px; text-align: center; font-size: 17px; }
+		.sidebar-bottom { margin-top: auto; padding: 17px 12px 0; border-top: 1px solid rgba(255,255,255,.14); color: #91aea1; font-size: 12px; line-height: 1.5; }
+		main { max-width: 1370px; width: 100%; min-width: 0; margin: 0 auto; padding: 44px clamp(24px, 5vw, 70px); }
+		.topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 36px; }
+		.eyebrow { margin: 0 0 8px; color: var(--orange); font-size: 12px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+		h1, h2, h3 { margin: 0; font-family: 'Space Grotesk', sans-serif; }
+		h1 { font-size: clamp(29px, 3vw, 42px); letter-spacing: -.04em; }
+		h2 { font-size: 20px; letter-spacing: -.025em; }
+		h3 { font-size: 15px; }
+		.date-badge { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 99px; color: var(--muted); background: rgba(255,255,255,.45); font-size: 12px; }
+		.date-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--orange); }
+		.account-actions { display: flex; align-items: center; gap: 10px; }
+		.account-button, .export-button { padding: 10px 13px; border: 1px solid var(--line); border-radius: 7px; background: var(--white); color: var(--green); font-size: 12px; font-weight: 700; }
+		.account-button:hover, .export-button:hover { border-color: var(--green); }
+		.account-button.primary { background: var(--green); color: white; }
+		.user-chip { display: none; align-items: center; gap: 8px; color: var(--green); font-size: 12px; font-weight: 700; }
+		.user-avatar { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 50%; background: var(--yellow); color: var(--green-dark); }
+		.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 28px; }
+		.stat-card { position: relative; min-height: 126px; padding: 21px; overflow: hidden; border: 1px solid var(--line); border-radius: 13px; background: var(--white); box-shadow: var(--shadow); }
+		.stat-card.highlight { background: var(--green); color: white; border-color: var(--green); }
+		.stat-card::after { content: ''; position: absolute; right: -19px; bottom: -32px; width: 90px; height: 90px; border: 17px solid var(--mint); border-radius: 50%; opacity: .65; }
+		.stat-card.highlight::after { border-color: rgba(255,255,255,.14); }
+		.stat-name { color: var(--muted); font-size: 12px; }
+		.highlight .stat-name { color: #b8d2c3; }
+		.stat-value { margin: 8px 0 2px; font-family: 'Space Grotesk', sans-serif; font-size: 27px; font-weight: 700; }
+		.stat-change { color: #438367; font-size: 11px; font-weight: 600; }
+		.highlight .stat-change { color: var(--yellow); }
+		.content-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(310px, .85fr); gap: 20px; align-items: start; }
+		.panel { padding: 25px; border: 1px solid var(--line); border-radius: 13px; background: var(--white); box-shadow: var(--shadow); }
+		.panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 25px; }
+		.panel-subtitle { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+		.periods { display: flex; gap: 4px; padding: 3px; border-radius: 7px; background: var(--paper); }
+		.period { padding: 6px 9px; border: 0; border-radius: 5px; background: transparent; color: var(--muted); font-size: 11px; }
+		.periods select { padding: 6px 8px; border: 0; border-radius: 5px; background: transparent; color: var(--green); font: inherit; font-size: 11px; font-weight: 700; }
+		.period.active { background: white; color: var(--green); box-shadow: 0 2px 7px rgba(0,0,0,.08); font-weight: 700; }
+		.chart { display: flex; align-items: flex-end; gap: 12px; height: 205px; padding: 13px 6px 27px; border-bottom: 1px solid var(--line); background: repeating-linear-gradient(to bottom, transparent 0, transparent 50px, #edf0eb 51px); }
+		.bar-wrap { display: flex; flex: 1; align-items: flex-end; height: 100%; min-width: 20px; }
+		.bar { width: 100%; min-height: 8px; border-radius: 5px 5px 2px 2px; background: var(--mint); transition: height .4s ease; }
+		.bar.current { background: var(--orange); }
+		.chart-labels { display: flex; gap: 12px; padding: 9px 6px 0; color: var(--muted); font-size: 10px; text-align: center; }
+		.chart-labels span { flex: 1; }
+		.legend { display: flex; gap: 17px; margin-top: 21px; color: var(--muted); font-size: 11px; }
+		.legend i { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 50%; background: var(--mint); }
+		.legend i.orange { background: var(--orange); }
+		.form-panel { background: #eef4ed; border-color: #d5e3d6; }
+		.form-panel .panel-heading { margin-bottom: 18px; }
+		.measurement-form { display: grid; gap: 12px; }
+		.field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+		label { display: grid; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 600; }
+		input { width: 100%; padding: 11px 12px; border: 1px solid #d3dfd4; border-radius: 7px; outline: 0; background: white; color: var(--ink); font-size: 14px; }
+		input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(28,91,72,.12); }
+		.unit-input { position: relative; }
+		.unit-input span { position: absolute; right: 12px; top: 11px; color: var(--muted); font-size: 12px; }
+		.unit-input input { padding-right: 38px; }
+		.save-button { margin-top: 5px; padding: 12px; border: 0; border-radius: 7px; background: var(--orange); color: white; font-weight: 700; font-size: 13px; }
+		.save-button:hover { background: #c95f2d; }
+		.history { grid-column: 1 / -1; }
+		.history-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+		.history-table th { padding: 0 12px 12px; color: var(--muted); font-size: 10px; font-weight: 600; text-align: left; text-transform: uppercase; letter-spacing: .07em; }
+		.history-table td { padding: 14px 12px; border-top: 1px solid #edf0ec; }
+		.history-table th:first-child, .history-table td:first-child { padding-left: 0; }
+		.empty-state { padding: 20px 0 5px; color: var(--muted); text-align: center; }
+		.delete-button { padding: 3px 6px; border: 0; background: transparent; color: #a7b3ac; font-size: 15px; }
+		.delete-button:hover { color: var(--orange); }
+		.toast { position: fixed; right: 25px; bottom: 25px; padding: 12px 16px; border-radius: 8px; background: var(--green-dark); color: white; box-shadow: var(--shadow); font-size: 13px; opacity: 0; transform: translateY(10px); transition: .25s; pointer-events: none; }
+		.toast.show { opacity: 1; transform: translateY(0); }
+		.modal-backdrop { position: fixed; inset: 0; z-index: 10; display: none; place-items: center; padding: 20px; background: rgba(18,62,50,.48); }
+		.modal-backdrop.open { display: grid; }
+		.modal { width: min(100%, 390px); padding: 27px; border-radius: 13px; background: var(--white); box-shadow: 0 24px 70px rgba(18,62,50,.25); }
+		.modal-heading { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+		.modal-heading p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+		.close-button { border: 0; background: transparent; color: var(--muted); font-size: 22px; line-height: 1; }
+		.auth-form { display: grid; gap: 13px; }
+		.auth-error { min-height: 16px; color: #b55232; font-size: 11px; }
+		.auth-switch { margin: 18px 0 0; color: var(--muted); text-align: center; font-size: 11px; }
+		.auth-switch button { padding: 0; border: 0; background: transparent; color: var(--green); font-weight: 700; }
+		.account-note { margin: 15px 0 0; color: var(--muted); font-size: 10px; line-height: 1.4; text-align: center; }
+		.profile-panel { grid-column: 1 / -1; }
+		.profile-layout { display: grid; grid-template-columns: 180px 1fr; gap: 30px; align-items: start; }
+		.profile-identity { padding: 8px 0; }
+		.profile-avatar-large { display: grid; place-items: center; width: 72px; height: 72px; margin-bottom: 15px; border-radius: 22px; background: var(--yellow); color: var(--green-dark); font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; }
+		.profile-identity p { margin: 5px 0; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+		.profile-form { display: grid; gap: 14px; max-width: 620px; }
+		.profile-form select { width: 100%; padding: 11px 12px; border: 1px solid #d3dfd4; border-radius: 7px; background: white; color: var(--ink); font: inherit; }
+		.profile-form input[readonly] { background: #f2f4f0; color: var(--muted); }
+		.profile-actions { display: flex; align-items: center; gap: 15px; margin-top: 5px; }
+		.profile-status { color: var(--green); font-size: 11px; font-weight: 600; }
+		.feature-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+		.feature-panel { min-width: 0; }
+		.metric-list { display: grid; gap: 13px; }
+		.metric-row { display: grid; grid-template-columns: 82px 1fr 50px; align-items: center; gap: 11px; color: var(--muted); font-size: 11px; }
+		.metric-track { height: 8px; overflow: hidden; border-radius: 99px; background: var(--paper); }
+		.metric-fill { height: 100%; border-radius: inherit; background: var(--orange); }
+		.metric-value { color: var(--ink); font-size: 11px; text-align: right; }
+		.health-note { margin: 20px 0 0; padding: 12px; border-radius: 8px; background: #fff7df; color: #78622c; font-size: 11px; line-height: 1.45; }
+		.goal-form, .reminder-form, .note-form { display: grid; gap: 13px; }
+		.goal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+		.goal-progress { margin: 4px 0 2px; padding: 13px; border-radius: 8px; background: var(--mint); color: var(--green-dark); font-size: 12px; line-height: 1.45; }
+		.goal-progress strong { display: block; margin-bottom: 3px; font-family: 'Space Grotesk', sans-serif; font-size: 18px; }
+		textarea { width: 100%; min-height: 92px; resize: vertical; padding: 11px 12px; border: 1px solid #d3dfd4; border-radius: 7px; outline: 0; background: white; color: var(--ink); font: inherit; font-size: 13px; }
+		textarea:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(28,91,72,.12); }
+		.reminder-status { padding: 12px; border-radius: 8px; background: #f4f0df; color: #78622c; font-size: 11px; line-height: 1.45; }
+		.photo-drop { display: grid; place-items: center; min-height: 130px; border: 1px dashed #b7cdbb; border-radius: 9px; background: #f5faf4; color: var(--muted); text-align: center; font-size: 11px; cursor: pointer; }
+		.photo-drop:hover { border-color: var(--green); color: var(--green); }
+		.photo-drop input { display: none; }
+		.photo-preview { display: none; max-width: 100%; max-height: 220px; margin: 12px auto 0; border-radius: 8px; }
+		.privacy-list { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+		.privacy-list li { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding-bottom: 14px; border-bottom: 1px solid #edf0ec; color: var(--muted); font-size: 12px; }
+		.privacy-list li:last-child { padding-bottom: 0; border-bottom: 0; }
+		.danger-button { padding: 9px 11px; border: 1px solid #e3b5a2; border-radius: 7px; background: #fff8f4; color: #aa542f; font-size: 11px; font-weight: 700; }
+		.danger-button:hover { background: #fbe9df; }
+		@media (max-width: 650px) { .profile-layout { grid-template-columns: 1fr; gap: 15px; } .profile-identity { display: grid; grid-template-columns: auto 1fr; column-gap: 15px; } .profile-avatar-large { grid-row: span 2; } }
+		@media (max-width: 900px) { .app-shell { grid-template-columns: 1fr; } .sidebar { padding: 16px 20px; } .brand { padding: 0 0 15px; } nav { display: flex; overflow-x: auto; } .nav-label, .sidebar-bottom { display: none; } .nav-item { white-space: nowrap; } main { padding: 28px 18px; } .stats { grid-template-columns: 1fr 1fr; } .content-grid, .feature-grid { grid-template-columns: 1fr; } .history { grid-column: auto; } }
+		@media (max-width: 520px) { .topbar { display: block; } .date-badge { width: fit-content; margin-top: 14px; } .account-actions { margin-top: 14px; } .stats { gap: 10px; } .stat-card { min-height: 112px; padding: 15px; } .stat-value { font-size: 23px; } .panel { padding: 18px; } .panel-heading { align-items: flex-start; flex-direction: column; } .periods { align-self: stretch; justify-content: space-between; } .chart { gap: 5px; } .chart-labels { gap: 5px; } .history-table { display: block; overflow-x: auto; white-space: nowrap; } }
+	</style>
+</head>
+<body>
+	<div class="app-shell">
+		<aside class="sidebar">
+			<div class="brand"><span class="brand-mark">↗</span> Formkurva</div>
+			<p class="nav-label">Meny</p>
+			<nav>
+				<button class="nav-item active"><span class="nav-icon">▦</span> Översikt</button>
+				<button class="nav-item" onclick="document.getElementById('new-measurement').scrollIntoView({behavior:'smooth'})"><span class="nav-icon">＋</span> Ny mätning</button>
+				<button class="nav-item" onclick="document.getElementById('history').scrollIntoView({behavior:'smooth'})"><span class="nav-icon">◷</span> Historik</button>
+				<button class="nav-item" onclick="document.getElementById('goals').scrollIntoView({behavior:'smooth'})"><span class="nav-icon">◎</span> Mål & hälsa</button>
+				<button class="nav-item" onclick="document.getElementById('profile').scrollIntoView({behavior:'smooth'})"><span class="nav-icon">◉</span> Min profil</button>
+			</nav>
+			<div class="sidebar-bottom">Din data sparas lokalt i den här webbläsaren.<br>En mätning i taget. En vana i taget.</div>
+		</aside>
+
+		<main>
+			<header class="topbar">
+				<div><p class="eyebrow">Din resa, i siffror</p><h1>God morgon, dags att<br>kolla läget.</h1></div>
+				<div class="account-actions"><div class="date-badge"><span class="date-dot"></span><span id="today"></span></div><div class="user-chip" id="user-chip"><span class="user-avatar" id="user-avatar"></span><span id="user-name"></span><button class="account-button" id="logout-button">Logga ut</button></div><button class="account-button primary" id="login-button">Logga in</button></div>
+			</header>
+
+			<section class="stats" aria-label="Senaste sammanfattning">
+				<article class="stat-card highlight"><div class="stat-name">Kroppsvikt</div><div class="stat-value" id="weight-stat">— kg</div><div class="stat-change" id="weight-change">Lägg till din första mätning</div></article>
+				<article class="stat-card"><div class="stat-name">Midja</div><div class="stat-value" id="waist-stat">— cm</div><div class="stat-change" id="waist-change">Ingen tidigare data</div></article>
+				<article class="stat-card"><div class="stat-name">Bröst</div><div class="stat-value" id="chest-stat">— cm</div><div class="stat-change" id="chest-change">Ingen tidigare data</div></article>
+				<article class="stat-card"><div class="stat-name">Överarm</div><div class="stat-value" id="arm-stat">— cm</div><div class="stat-change" id="arm-change">Ingen tidigare data</div></article>
+			</section>
+
+			<div class="content-grid">
+				<section class="panel"><div class="panel-heading"><div><h2 id="chart-title">Vikt över tid</h2><p class="panel-subtitle">Följ trenden, inte bara siffran.</p></div><div class="periods"><select id="chart-metric" aria-label="Välj mått"><option value="weight">Vikt</option><option value="waist">Midja</option><option value="chest">Bröst</option><option value="arm">Överarm</option><option value="thigh">Lår</option><option value="hip">Höft</option></select><button class="period active" data-months="1">1 mån</button><button class="period" data-months="3">3 mån</button><button class="period" data-months="6">6 mån</button></div></div><div class="chart" id="chart"></div><div class="chart-labels" id="chart-labels"></div><div class="legend"><span><i class="orange"></i>Senaste mätning</span><span><i></i>Äldre mätningar</span></div></section>
+
+				<section class="panel form-panel" id="new-measurement"><div class="panel-heading"><div><h2>Ny mätning</h2><p class="panel-subtitle">Fyll i det du vill följa idag.</p></div></div><form class="measurement-form" id="measurement-form"><label>Datum<input type="date" name="date" id="date-input" required></label><div class="field-grid"><label>Kroppsvikt<div class="unit-input"><input type="number" name="weight" step="0.1" min="0" placeholder="0.0"><span>kg</span></div></label><label>Midja<div class="unit-input"><input type="number" name="waist" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Bröst<div class="unit-input"><input type="number" name="chest" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Överarm<div class="unit-input"><input type="number" name="arm" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Lår<div class="unit-input"><input type="number" name="thigh" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Höft<div class="unit-input"><input type="number" name="hip" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label></div><button class="save-button" type="submit">Spara mätning <span>→</span></button></form></section>
+
+				<section class="panel history" id="history"><div class="panel-heading"><div><h2>Senaste mätningar</h2><p class="panel-subtitle">Din historik, samlad på ett ställe.</p></div><button class="export-button" id="export-button">↓ Ladda ner resultat</button></div><div id="history-content"></div></section>
+
+					<section class="panel profile-panel" id="profile"><div class="panel-heading"><div><h2>Min profil</h2><p class="panel-subtitle">Ändra dina uppgifter och följ dina mål.</p></div></div><div class="profile-layout"><div class="profile-identity"><div class="profile-avatar-large" id="profile-avatar">?</div><div><h3 id="profile-name-preview">Gäst</h3><p id="profile-email-preview">Logga in för att redigera profilen.</p></div></div><form class="profile-form" id="profile-form"><div class="field-grid"><label>Visningsnamn<input type="text" name="name" id="profile-name" placeholder="Ditt namn"></label><label>E-post<input type="email" name="email" id="profile-email" readonly></label><label>Längd<div class="unit-input"><input type="number" name="height" id="profile-height" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Min målvikt<div class="unit-input"><input type="number" name="goalWeight" id="profile-goal" step="0.1" min="0" placeholder="0.0"><span>kg</span></div></label><label>Måttenhet<select name="unit" id="profile-unit"><option value="cm">Centimeter (cm)</option><option value="in">Tum (in)</option></select></label></div><div class="profile-actions"><button class="save-button" type="submit">Spara profil <span>→</span></button><span class="profile-status" id="profile-status"></span></div></form></div></section>
+
+				<div class="feature-grid" id="goals">
+					<section class="panel feature-panel"><div class="panel-heading"><div><h2>Mål & delmål</h2><p class="panel-subtitle">Se hur du närmar dig dina mål.</p></div></div><div class="goal-progress" id="goal-progress"><strong>Logga in för att sätta mål</strong>Din utveckling visas här.</div><form class="goal-form" id="goal-form"><div class="goal-grid"><label>Målvikt<div class="unit-input"><input type="number" name="goalWeight" id="goal-weight" step="0.1" min="0" placeholder="0.0"><span>kg</span></div></label><label>Måldatum<input type="date" name="goalDate" id="goal-date"></label></div><button class="save-button" type="submit">Spara mål <span>→</span></button></form></section>
+					<section class="panel feature-panel"><div class="panel-heading"><div><h2>Hälsosammanfattning</h2><p class="panel-subtitle">En enkel överblick, inte medicinsk rådgivning.</p></div></div><div class="metric-list" id="health-summary"><div class="empty-state">Spara längd och mätningar i din profil för att se sammanfattningen.</div></div><div class="health-note">Mät samma tid på dagen och under liknande förhållanden för jämförbara resultat.</div></section>
+					<section class="panel feature-panel"><div class="panel-heading"><div><h2>Påminnelse</h2><p class="panel-subtitle">Skapa en återkommande mätvana.</p></div></div><form class="reminder-form" id="reminder-form"><label>Nästa mätning<input type="date" name="reminderDate" id="reminder-date"></label><label>Påminn mig<select name="frequency" id="reminder-frequency"><option value="weekly">Varje vecka</option><option value="monthly">Varje månad</option></select></label><button class="save-button" type="submit">Spara påminnelse <span>→</span></button></form><div class="reminder-status" id="reminder-status">Ingen påminnelse sparad ännu.</div></section>
+					<section class="panel feature-panel"><div class="panel-heading"><div><h2>Anteckning & progressbild</h2><p class="panel-subtitle">Spara dagens känsla tillsammans med mätningen.</p></div></div><form class="note-form" id="note-form"><label>Dagens anteckning<textarea name="note" id="daily-note" placeholder="Träning, energi, sömn eller annat..."></textarea></label><label class="photo-drop">Lägg till progressbild<input type="file" id="progress-photo" accept="image/*"><span>Välj en bild från enheten</span></label><img class="photo-preview" id="photo-preview" alt="Förhandsvisning av progressbild"><button class="save-button" type="submit">Spara anteckning <span>→</span></button></form></section>
+				</div>
+
+				<section class="panel profile-panel"><div class="panel-heading"><div><h2>Integritet & data</h2><p class="panel-subtitle">Du bestämmer över din information.</p></div></div><ul class="privacy-list"><li><span>All data finns lokalt i den här webbläsaren.</span><button class="export-button" id="export-all">Exportera allt</button></li><li><span>Vill du börja om från början?</span><button class="danger-button" id="delete-data">Radera mina data</button></li></ul></section>
+			</div>
+		</main>
+	</div>
+	<div class="toast" id="toast">Mätningen är sparad.</div>
+	<div class="modal-backdrop" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title"><section class="modal"><div class="modal-heading"><div><h2 id="auth-title">Logga in</h2><p id="auth-description">Spara och följ dina resultat på den här enheten.</p></div><button class="close-button" id="close-auth" aria-label="Stäng">×</button></div><form class="auth-form" id="auth-form"><label>E-post<input type="email" name="email" required placeholder="du@exempel.se"></label><label>Lösenord<input type="password" name="password" required minlength="8" placeholder="Minst 8 tecken"></label><div class="auth-error" id="auth-error"></div><button class="save-button" type="submit" id="auth-submit">Logga in</button></form><p class="auth-switch" id="auth-switch">Ny här? <button type="button">Skapa konto</button></p><p class="account-note">Kontot sparas lokalt i denna webbläsare. Använd inte ett lösenord du har någon annanstans.</p></section></div>
+	<script>
+		const storagePrefix = 'formkurva-measurements-';
+		const accountsKey = 'formkurva-accounts';
+		const serverMode = location.protocol === 'http:' || location.protocol === 'https:';
+		let currentUser = localStorage.getItem('formkurva-current-user') || '';
+		const form = document.getElementById('measurement-form');
+		const today = new Date();
+		const dateToInput = date => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+		document.getElementById('today').textContent = today.toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric' });
+		document.getElementById('date-input').value = dateToInput(today);
+		function storageKey() { return storagePrefix + (currentUser || 'guest'); }
+		let measurements = JSON.parse(localStorage.getItem(storageKey()) || '[]');
+		const profileForm = document.getElementById('profile-form');
+		function profileKey() { return 'formkurva-profile-' + (currentUser || 'guest'); }
+		function renderProfile() {
+			const profile = JSON.parse(localStorage.getItem(profileKey()) || '{}');
+			const displayName = profile.name || (currentUser ? currentUser.split('@')[0] : 'Gäst');
+			document.getElementById('profile-name-preview').textContent = displayName;
+			document.getElementById('profile-email-preview').textContent = currentUser || 'Logga in för att redigera profilen.';
+			document.getElementById('profile-avatar').textContent = displayName[0]?.toUpperCase() || '?';
+			document.getElementById('profile-name').value = profile.name || '';
+			document.getElementById('profile-email').value = currentUser;
+			document.getElementById('profile-height').value = profile.height || '';
+			document.getElementById('profile-goal').value = profile.goalWeight || '';
+			document.getElementById('profile-unit').value = profile.unit || 'cm';
+			document.getElementById('goal-weight').value = profile.goalWeight || '';
+			document.getElementById('goal-date').value = profile.goalDate || '';
+			document.getElementById('reminder-date').value = profile.reminderDate || '';
+			document.getElementById('reminder-frequency').value = profile.frequency || 'weekly';
+			document.getElementById('reminder-status').textContent = profile.reminderDate ? 'Påminnelse sparad till ' + new Date(profile.reminderDate + 'T12:00:00').toLocaleDateString('sv-SE') + '.' : 'Ingen påminnelse sparad ännu.';
+			document.getElementById('daily-note').value = profile.note || '';
+			document.getElementById('photo-preview').src = profile.photo || '';
+			document.getElementById('photo-preview').style.display = profile.photo ? 'block' : 'none';
+		}
+		function getProfile() { return JSON.parse(localStorage.getItem(profileKey()) || '{}'); }
+		async function loadServerState() { if (!serverMode) return; try { const session = await api('/me'); currentUser = session.user?.email || ''; measurements = session.user ? (await api('/measurements')).measurements : []; if (session.user?.profile) localStorage.setItem(profileKey(), JSON.stringify(session.user.profile)); updateAccountUi(); renderProfile(); render(); } catch (error) { handleApiError(error); } }
+		function renderHealth() {
+			const profile = getProfile(); const latest = [...measurements].sort((a, b) => new Date(a.date) - new Date(b.date)).at(-1); const height = Number(profile.height) / 100; const weight = Number(latest?.weight); const waist = Number(latest?.waist); const summary = document.getElementById('health-summary');
+			if (!height || !weight) { summary.innerHTML = '<div class="empty-state">Lägg till längd i profilen och vikt i en mätning för att se sammanfattningen.</div>'; return; }
+			const bmi = weight / (height * height); const ratio = waist ? (waist / Number(profile.height)).toFixed(2).replace('.', ',') : null; summary.innerHTML = '<div class="metric-row"><span>BMI</span><div class="metric-track"><div class="metric-fill" style="width:' + Math.min(100, bmi / 35 * 100) + '%"></div></div><strong class="metric-value">' + bmi.toFixed(1).replace('.', ',') + '</strong></div>' + (ratio ? '<div class="metric-row"><span>Midja/längd</span><div class="metric-track"><div class="metric-fill" style="width:' + Math.min(100, Number(ratio.replace(',', '.')) / .7 * 100) + '%"></div></div><strong class="metric-value">' + ratio + '</strong></div>' : '<div class="empty-state">Lägg till midjemått för midja/längd-kvot.</div>');
+		}
+		function renderGoal() { const profile = getProfile(); const latest = [...measurements].sort((a, b) => new Date(a.date) - new Date(b.date)).at(-1); const progress = document.getElementById('goal-progress'); const goal = Number(profile.goalWeight); const weight = Number(latest?.weight); if (!goal || !weight) { progress.innerHTML = '<strong>Inget mål ännu</strong>Ange en målvikt för att följa din utveckling.'; return; } const remaining = weight - goal; progress.innerHTML = '<strong>' + (remaining > 0 ? remaining.toFixed(1).replace('.', ',') + ' kg kvar' : 'Målet är uppnått') + '</strong>' + (remaining > 0 ? 'Från senaste vikt på ' + weight.toFixed(1).replace('.', ',') + ' kg.' : 'Bra jobbat med din utveckling.'); }
+		const authModal = document.getElementById('auth-modal');
+		const authForm = document.getElementById('auth-form');
+		let isRegistering = false;
+		let activePeriodMonths = 1;
+		let currentMetric = 'weight';
+		async function api(path, options = {}) { const response = await fetch('/api' + path, { credentials: 'same-origin', headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options }); if (!response.ok) { const error = await response.json().catch(() => ({ error: 'Serverfel.' })); throw new Error(error.error || 'Serverfel.'); } return response.status === 204 ? null : response.json(); }
+		function handleApiError(error) { showToast(error.message || 'Kunde inte spara ändringen.'); }
+		function showToast(message) { const toast = document.getElementById('toast'); toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2400); }
+		function updateAccountUi() {
+			const profile = currentUser ? JSON.parse(localStorage.getItem('formkurva-profile-' + currentUser) || '{}') : {};
+			const displayName = profile.name || (currentUser ? currentUser.split('@')[0] : '');
+			document.getElementById('login-button').style.display = currentUser ? 'none' : 'block';
+			document.getElementById('user-chip').style.display = currentUser ? 'flex' : 'none';
+			document.getElementById('user-name').textContent = displayName;
+			document.getElementById('user-avatar').textContent = displayName ? displayName[0].toUpperCase() : '';
+		}
+		function openAuth(register = false) { isRegistering = register; document.getElementById('auth-title').textContent = register ? 'Skapa konto' : 'Logga in'; document.getElementById('auth-description').textContent = register ? 'Skapa en lokal profil för att spara dina resultat.' : 'Spara och följ dina resultat på den här enheten.'; document.getElementById('auth-submit').textContent = register ? 'Skapa konto' : 'Logga in'; document.getElementById('auth-switch').innerHTML = register ? 'Har du redan konto? <button type="button">Logga in</button>' : 'Ny här? <button type="button">Skapa konto</button>'; document.getElementById('auth-error').textContent = ''; authForm.reset(); authModal.classList.add('open'); }
+		document.getElementById('login-button').addEventListener('click', () => openAuth());
+		document.getElementById('close-auth').addEventListener('click', () => authModal.classList.remove('open'));
+		authModal.addEventListener('click', event => { if (event.target === authModal) authModal.classList.remove('open'); });
+		document.getElementById('auth-switch').addEventListener('click', () => openAuth(!isRegistering));
+		document.getElementById('logout-button').addEventListener('click', async () => { if (serverMode) { await api('/auth/logout', { method: 'POST' }).catch(handleApiError); } currentUser = ''; localStorage.removeItem('formkurva-current-user'); measurements = JSON.parse(localStorage.getItem(storageKey()) || '[]'); updateAccountUi(); renderProfile(); render(); showToast('Du är utloggad.'); });
+		authForm.addEventListener('submit', async event => { event.preventDefault(); const data = Object.fromEntries(new FormData(authForm)); const error = document.getElementById('auth-error'); if (serverMode) { try { const result = await api(isRegistering ? '/auth/register' : '/auth/login', { method: 'POST', body: JSON.stringify(data) }); currentUser = result.user.email; measurements = (await api('/measurements')).measurements; localStorage.setItem('formkurva-current-user', currentUser); localStorage.setItem(profileKey(), JSON.stringify(result.user.profile || {})); updateAccountUi(); renderProfile(); render(); authModal.classList.remove('open'); showToast(isRegistering ? 'Kontot är skapat.' : 'Du är inloggad.'); } catch (requestError) { error.textContent = requestError.message; } return; } const accounts = JSON.parse(localStorage.getItem(accountsKey) || '{}'); if (isRegistering && accounts[data.email]) { error.textContent = 'Det finns redan ett konto med den e-posten.'; return; } if (!isRegistering && (!accounts[data.email] || accounts[data.email] !== data.password)) { error.textContent = 'E-posten eller lösenordet stämmer inte.'; return; } if (isRegistering) accounts[data.email] = data.password; localStorage.setItem(accountsKey, JSON.stringify(accounts)); currentUser = data.email; localStorage.setItem('formkurva-current-user', currentUser); measurements = JSON.parse(localStorage.getItem(storageKey()) || '[]'); updateAccountUi(); renderProfile(); render(); authModal.classList.remove('open'); showToast(isRegistering ? 'Kontot är skapat.' : 'Du är inloggad.'); });
+		profileForm.addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(true); return; } const profile = Object.fromEntries(new FormData(profileForm)); delete profile.email; try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); localStorage.setItem(profileKey(), JSON.stringify(result.profile)); } else localStorage.setItem(profileKey(), JSON.stringify(profile)); updateAccountUi(); renderProfile(); renderHealth(); renderGoal(); showToast('Profilen är uppdaterad.'); } catch (error) { handleApiError(error); } });
+		document.getElementById('goal-form').addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(true); return; } const goal = Object.fromEntries(new FormData(event.target)); const profile = getProfile(); Object.assign(profile, goal); try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); localStorage.setItem(profileKey(), JSON.stringify(result.profile)); } else localStorage.setItem(profileKey(), JSON.stringify(profile)); renderProfile(); renderGoal(); showToast('Målet är sparat.'); } catch (error) { handleApiError(error); } });
+		document.getElementById('reminder-form').addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(true); return; } const reminder = Object.fromEntries(new FormData(event.target)); const profile = getProfile(); Object.assign(profile, reminder); try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); localStorage.setItem(profileKey(), JSON.stringify(result.profile)); } else localStorage.setItem(profileKey(), JSON.stringify(profile)); renderProfile(); showToast('Påminnelsen är sparad.'); } catch (error) { handleApiError(error); } });
+		document.getElementById('note-form').addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(true); return; } const profile = getProfile(); profile.note = document.getElementById('daily-note').value; try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); localStorage.setItem(profileKey(), JSON.stringify(result.profile)); } else localStorage.setItem(profileKey(), JSON.stringify(profile)); showToast('Anteckningen är sparad.'); } catch (error) { handleApiError(error); } });
+		document.getElementById('progress-photo').addEventListener('change', event => { const file = event.target.files[0]; if (!file || !currentUser) return; const reader = new FileReader(); reader.onload = async () => { const profile = getProfile(); profile.photo = reader.result; try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); localStorage.setItem(profileKey(), JSON.stringify(result.profile)); } else localStorage.setItem(profileKey(), JSON.stringify(profile)); renderProfile(); showToast('Progressbilden är sparad.'); } catch (error) { handleApiError(error); } }; reader.readAsDataURL(file); });
+		document.getElementById('export-all').addEventListener('click', () => { if (!currentUser) { openAuth(); return; } const payload = { profile: getProfile(), measurements }; const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'formkurva-all-data.json'; link.click(); URL.revokeObjectURL(link.href); showToast('All data laddades ner.'); });
+		document.getElementById('delete-data').addEventListener('click', async () => { if (!currentUser) { openAuth(); return; } if (!confirm('Vill du radera alla dina mätningar och profiluppgifter?')) return; try { if (serverMode) await api('/account', { method: 'DELETE' }); else { localStorage.removeItem(storageKey()); localStorage.removeItem(profileKey()); } currentUser = ''; measurements = []; updateAccountUi(); renderProfile(); render(); renderGoal(); renderHealth(); showToast('Din data är raderad.'); } catch (error) { handleApiError(error); } });
+		document.getElementById('chart-metric').addEventListener('change', event => { currentMetric = event.target.value; render(); });
+		document.querySelectorAll('.period').forEach(button => button.addEventListener('click', () => { activePeriodMonths = Number(button.dataset.months); document.querySelectorAll('.period').forEach(item => item.classList.remove('active')); button.classList.add('active'); render(); }));
+		document.getElementById('export-button').addEventListener('click', () => { if (!currentUser) { openAuth(); return; } if (!measurements.length) { showToast('Spara en mätning först.'); return; } const blob = new Blob([JSON.stringify({ account: currentUser, measurements }, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'formkurva-resultat.json'; link.click(); URL.revokeObjectURL(link.href); showToast('Resultaten laddades ner.'); });
+
+		function formatNumber(value, unit) { return value === null || value === undefined || value === '' ? '— ' + unit : Number(value).toLocaleString('sv-SE', { maximumFractionDigits: 1 }) + ' ' + unit; }
+		function changeText(current, previous, unit) {
+			if (current === null || current === undefined || current === '' || previous === null || previous === undefined || previous === '') return 'Ingen tidigare data';
+			const change = Number(current) - Number(previous);
+			return (change > 0 ? '+' : '') + change.toLocaleString('sv-SE', { maximumFractionDigits: 1 }) + ' ' + unit + ' sedan sist';
+		}
+		function render() {
+			const sorted = [...measurements].sort((a, b) => new Date(a.date) - new Date(b.date));
+			const chartTitle = document.getElementById('chart-metric').selectedOptions[0].textContent;
+			document.getElementById('chart-title').textContent = chartTitle + ' över tid';
+			const latest = sorted.at(-1);
+			const previous = sorted.at(-2);
+			[['weight', 'kg'], ['waist', 'cm'], ['chest', 'cm'], ['arm', 'cm']].forEach(([key, unit]) => {
+				document.getElementById(key + '-stat').textContent = formatNumber(latest?.[key], unit);
+				document.getElementById(key + '-change').textContent = changeText(latest?.[key], previous?.[key], unit);
+			});
+			const chart = document.getElementById('chart');
+			const labels = document.getElementById('chart-labels');
+			const cutoff = new Date(); cutoff.setMonth(cutoff.getMonth() - activePeriodMonths);
+			const chartData = sorted.filter(item => new Date(item.date + 'T12:00:00') >= cutoff).slice(-8);
+			const values = chartData.map(item => Number(item[currentMetric])).filter(value => value > 0);
+			const min = values.length ? Math.min(...values) - 2 : 60;
+			const max = values.length ? Math.max(...values) + 2 : 90;
+			const unit = currentMetric === 'weight' ? 'kg' : 'cm';
+			chart.innerHTML = chartData.length ? chartData.map((item, index) => '<div class="bar-wrap"><div class="bar ' + (index === chartData.length - 1 ? 'current' : '') + '" style="height:' + Math.max(8, ((Number(item[currentMetric]) - min) / (max - min)) * 100) + '%" title="' + formatNumber(item[currentMetric], unit) + '"></div></div>').join('') : '<div class="empty-state">Spara mätningar inom vald period för att se din trend.</div>';
+			labels.innerHTML = chartData.map(item => '<span>' + new Date(item.date + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }) + '</span>').join('');
+			renderHealth(); renderGoal();
+			const history = document.getElementById('history-content');
+			history.innerHTML = measurements.length ? '<table class="history-table"><thead><tr><th>Datum</th><th>Vikt</th><th>Midja</th><th>Bröst</th><th>Överarm</th><th></th></tr></thead><tbody>' + [...measurements].sort((a,b) => new Date(b.date) - new Date(a.date)).map(item => '<tr><td>' + new Date(item.date + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' }) + '</td><td>' + formatNumber(item.weight, 'kg') + '</td><td>' + formatNumber(item.waist, 'cm') + '</td><td>' + formatNumber(item.chest, 'cm') + '</td><td>' + formatNumber(item.arm, 'cm') + '</td><td><button class="delete-button" aria-label="Ta bort mätning" onclick="removeMeasurement(\'' + item.id + '\')">×</button></td></tr>').join('') + '</tbody></table>' : '<div class="empty-state">Din mätdata visas här när du sparat din första mätning.</div>';
+		}
+		form.addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(true); return; } const data = Object.fromEntries(new FormData(form)); try { if (serverMode) { const saved = await api('/measurements', { method: 'POST', body: JSON.stringify(data) }); measurements.push(saved); } else { data.id = Date.now().toString(); measurements.push(data); localStorage.setItem(storageKey(), JSON.stringify(measurements)); } form.reset(); document.getElementById('date-input').value = dateToInput(new Date()); render(); showToast('Mätningen är sparad.'); } catch (error) { handleApiError(error); } });
+		async function removeMeasurement(id) { try { if (serverMode) await api('/measurements/' + encodeURIComponent(id), { method: 'DELETE' }); measurements = measurements.filter(item => item.id !== id); if (!serverMode) localStorage.setItem(storageKey(), JSON.stringify(measurements)); render(); } catch (error) { handleApiError(error); } }
+		updateAccountUi();
+		renderProfile();
+		render();
+		loadServerState();
+	</script>
+</body>
+</html>

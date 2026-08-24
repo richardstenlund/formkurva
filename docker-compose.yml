@@ -1,0 +1,16 @@
+services:
+  formkurva:
+    build: .
+    container_name: formkurva
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      SESSION_DAYS: 30
+      TRUST_PROXY: "false"
+    volumes:
+      - formkurva_data:/data
+
+volumes:
+  formkurva_data:
