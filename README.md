@@ -14,6 +14,8 @@ docker compose up -d --build
 
 4. Öppna `http://SERVERNS-IP:3000`.
 
+Vid vanlig HTTP i hemnätet ska `SECURE_COOKIES` vara `false`. När du lägger sidan bakom HTTPS ändrar du den till `true` och kör om containern.
+
 Databasen sparas i Docker-volymen `formkurva_data` och överlever omstart eller uppdatering av containern.
 
 ## Uppdatera

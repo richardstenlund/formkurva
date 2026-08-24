@@ -6,6 +6,7 @@ const Database = require('better-sqlite3');
 const app = express();
 const port = Number(process.env.PORT || 3000);
 const sessionDays = Math.max(1, Number(process.env.SESSION_DAYS || 30));
+const secureCookies = process.env.SECURE_COOKIES === 'true';
 const db = new Database(process.env.DB_PATH || '/data/formkurva.db');
 db.pragma('journal_mode = WAL');
 db.exec(`
@@ -46,7 +47,7 @@ function createSession(userId, res) {
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = Date.now() + sessionDays * 86400000;
   db.prepare('INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)').run(token, userId, expiresAt);
-  res.cookieHeader = `formkurva_session=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${sessionDays * 86400}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
+  res.cookieHeader = `formkurva_session=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${sessionDays * 86400}${secureCookies ? '; Secure' : ''}`;
   res.setHeader('Set-Cookie', res.cookieHeader);
 }
 function sessionUser(req) {
