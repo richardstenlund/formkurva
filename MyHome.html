@@ -20,9 +20,21 @@
 			--yellow: #f2cf65;
 			--shadow: 0 18px 45px rgba(30, 57, 43, 0.08);
 		}
+		[data-theme="dark"] {
+			--ink: #edf4ee;
+			--muted: #a9bbb0;
+			--paper: #17231f;
+			--white: #22312b;
+			--line: #394941;
+			--mint: #315b4c;
+			--green: #76c49e;
+			--green-dark: #0d1815;
+			--shadow: 0 18px 45px rgba(0, 0, 0, 0.22);
+		}
 
 		* { box-sizing: border-box; }
-		body { margin: 0; background: var(--paper); color: var(--ink); font-family: 'DM Sans', sans-serif; }
+		.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+		body { margin: 0; background: var(--paper); color: var(--ink); font-family: 'DM Sans', sans-serif; transition: background .2s ease, color .2s ease; }
 		button, input { font: inherit; }
 		button { cursor: pointer; }
 		.app-shell { display: grid; grid-template-columns: 250px 1fr; min-width: 0; min-height: 100vh; }
@@ -50,6 +62,7 @@
 		.account-button.primary { background: var(--green); color: white; }
 		.user-chip { display: none; align-items: center; gap: 8px; color: var(--green); font-size: 12px; font-weight: 700; }
 		.user-avatar { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 50%; background: var(--yellow); color: var(--green-dark); }
+		.theme-select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--white); color: var(--ink); font-size: 12px; }
 		.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 28px; }
 		.stat-card { position: relative; min-height: 126px; padding: 21px; overflow: hidden; border: 1px solid var(--line); border-radius: 13px; background: var(--white); box-shadow: var(--shadow); }
 		.stat-card.highlight { background: var(--green); color: white; border-color: var(--green); }
@@ -117,6 +130,11 @@
 		.profile-identity p { margin: 5px 0; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 		.profile-form { display: grid; gap: 14px; max-width: 620px; }
 		.profile-form select { width: 100%; padding: 11px 12px; border: 1px solid #d3dfd4; border-radius: 7px; background: white; color: var(--ink); font: inherit; }
+		[data-theme="dark"] input, [data-theme="dark"] textarea, [data-theme="dark"] select { border-color: var(--line); background: #1b2923; color: var(--ink); }
+		[data-theme="dark"] .profile-form input[readonly] { background: #18231f; }
+		[data-theme="dark"] .health-note { background: #493f25; color: #f0d991; }
+		[data-theme="dark"] .reminder-status { background: #3e3926; color: #efd98f; }
+		[data-theme="dark"] .photo-drop { border-color: #527461; background: #1b2d25; }
 		.profile-form input[readonly] { background: #f2f4f0; color: var(--muted); }
 		.profile-actions { display: flex; align-items: center; gap: 15px; margin-top: 5px; }
 		.profile-status { color: var(--green); font-size: 11px; font-weight: 600; }
@@ -167,7 +185,7 @@
 		<main>
 			<header class="topbar">
 				<div><p class="eyebrow">Din resa, i siffror</p><h1>God morgon, dags att<br>kolla läget.</h1></div>
-				<div class="account-actions"><div class="date-badge"><span class="date-dot"></span><span id="today"></span></div><div class="user-chip" id="user-chip"><span class="user-avatar" id="user-avatar"></span><span id="user-name"></span><button class="account-button" id="logout-button">Logga ut</button></div><button class="account-button primary" id="login-button">Logga in</button></div>
+				<div class="account-actions"><label class="theme-control"><span class="sr-only">Tema</span><select class="theme-select" id="theme-select" aria-label="Välj tema"><option value="system">System</option><option value="light">Ljust</option><option value="dark">Mörkt</option></select></label><div class="date-badge"><span class="date-dot"></span><span id="today"></span></div><div class="user-chip" id="user-chip"><span class="user-avatar" id="user-avatar"></span><span id="user-name"></span><button class="account-button" id="logout-button">Logga ut</button></div><button class="account-button primary" id="login-button">Logga in</button></div>
 			</header>
 
 			<section class="stats" aria-label="Senaste sammanfattning">
@@ -203,6 +221,12 @@
 		const storagePrefix = 'formkurva-measurements-';
 		const accountsKey = 'formkurva-accounts';
 		const serverMode = location.protocol === 'http:' || location.protocol === 'https:';
+		const themeSelect = document.getElementById('theme-select');
+		const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
+		function applyTheme() { const preference = localStorage.getItem('formkurva-theme') || 'system'; const isDark = preference === 'dark' || (preference === 'system' && systemTheme.matches); document.documentElement.dataset.theme = isDark ? 'dark' : 'light'; themeSelect.value = preference; }
+		applyTheme();
+		themeSelect.addEventListener('change', event => { localStorage.setItem('formkurva-theme', event.target.value); applyTheme(); });
+		systemTheme.addEventListener('change', () => { if ((localStorage.getItem('formkurva-theme') || 'system') === 'system') applyTheme(); });
 		let currentUser = localStorage.getItem('formkurva-current-user') || '';
 		const form = document.getElementById('measurement-form');
 		const today = new Date();
