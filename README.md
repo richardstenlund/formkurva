@@ -30,6 +30,8 @@ Admin-sidan finns även direkt på `/admin.html` och innehåller kontostatistik,
 
 På profilsidan finns lösenordsbyte, profilbild, mål och måttenhet. Historiken kan exporteras som JSON eller CSV och tidigare mätningar kan ändras.
 
+Gym-sidan finns på `/gym.html`. Där kan användare välja bland övningar för alla stora muskelgrupper, logga träningspass och bygga egna träningsdagar. Träningspassen och schemat sparas i SQLite via API:et.
+
 Vid vanlig HTTP i hemnätet ska `SECURE_COOKIES` vara `false`. När du lägger sidan bakom HTTPS ändrar du den till `true` och kör om containern.
 
 Databasen sparas i Docker-volymen `formkurva_data` och överlever omstart eller uppdatering av containern.

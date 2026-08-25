@@ -29,8 +29,24 @@ db.exec(`
     date TEXT NOT NULL,
     data_json TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS workouts (
+    id TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    date TEXT NOT NULL,
+    exercise TEXT NOT NULL,
+    muscle_group TEXT NOT NULL,
+    sets INTEGER NOT NULL,
+    reps INTEGER NOT NULL,
+    weight REAL NOT NULL DEFAULT 0,
+    notes TEXT NOT NULL DEFAULT ''
+  );
+  CREATE TABLE IF NOT EXISTS routines (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    routine_json TEXT NOT NULL DEFAULT '{}'
+  );
   CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions(expires_at);
   CREATE INDEX IF NOT EXISTS measurements_user_date_idx ON measurements(user_id, date);
+  CREATE INDEX IF NOT EXISTS workouts_user_date_idx ON workouts(user_id, date);
 `);
 try { db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'"); } catch (error) { if (!error.message.includes('duplicate column name')) throw error; }
 
@@ -109,6 +125,20 @@ app.get('/api/measurements', requireUser, (req, res) => res.json({ measurements:
 app.post('/api/measurements', requireUser, (req, res) => { if (!validMeasurement(req.body)) return res.status(400).json({ error: 'Ange datum och minst ett mått.' }); const id = crypto.randomUUID(); const { date, ...data } = req.body; db.prepare('INSERT INTO measurements (id, user_id, date, data_json) VALUES (?, ?, ?, ?)').run(id, req.user.id, date, JSON.stringify(data)); res.status(201).json({ id, date, ...data }); });
 app.put('/api/measurements/:id', requireUser, (req, res) => { if (!validMeasurement(req.body)) return res.status(400).json({ error: 'Ange datum och minst ett mått.' }); const { date, ...data } = req.body; const result = db.prepare('UPDATE measurements SET date = ?, data_json = ? WHERE id = ? AND user_id = ?').run(date, JSON.stringify(data), req.params.id, req.user.id); if (!result.changes) return res.status(404).json({ error: 'Mätningen hittades inte.' }); res.json({ id: req.params.id, date, ...data }); });
 app.delete('/api/measurements/:id', requireUser, (req, res) => { db.prepare('DELETE FROM measurements WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id); res.status(204).end(); });
+app.get('/api/workouts', requireUser, (req, res) => res.json({ workouts: db.prepare('SELECT id, date, exercise, muscle_group, sets, reps, weight, notes FROM workouts WHERE user_id = ? ORDER BY date DESC, rowid DESC').all(req.user.id) }));
+app.post('/api/workouts', requireUser, (req, res) => { const data = req.body || {}; if (!data.date || !data.exercise || !data.muscleGroup || Number(data.sets) < 1 || Number(data.reps) < 1 || Number(data.weight) < 0) return res.status(400).json({ error: 'Fyll i datum, övning, set, reps och vikt.' }); const workout = { id: crypto.randomUUID(), date: String(data.date), exercise: String(data.exercise).slice(0, 100), muscle_group: String(data.muscleGroup).slice(0, 50), sets: Number(data.sets), reps: Number(data.reps), weight: Number(data.weight), notes: String(data.notes || '').slice(0, 500) }; db.prepare('INSERT INTO workouts (id, user_id, date, exercise, muscle_group, sets, reps, weight, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(workout.id, req.user.id, workout.date, workout.exercise, workout.muscle_group, workout.sets, workout.reps, workout.weight, workout.notes); res.status(201).json(workout); });
+app.delete('/api/workouts/:id', requireUser, (req, res) => { db.prepare('DELETE FROM workouts WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id); res.status(204).end(); });
+app.get('/api/routine', requireUser, (req, res) => { const row = db.prepare('SELECT routine_json FROM routines WHERE user_id = ?').get(req.user.id); res.json({ routine: row ? JSON.parse(row.routine_json) : { days: [] } }); });
+app.put('/api/routine', requireUser, (req, res) => {
+  const routine = req.body && Array.isArray(req.body.days) ? {
+    days: req.body.days.slice(0, 7).map(day => ({
+      name: String(day.name || 'Träningsdag').slice(0, 50),
+      exercises: Array.isArray(day.exercises) ? day.exercises.map(exercise => String(exercise).slice(0, 100)).slice(0, 30) : []
+    }))
+  } : { days: [] };
+  db.prepare('INSERT INTO routines (user_id, routine_json) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET routine_json = excluded.routine_json').run(req.user.id, JSON.stringify(routine));
+  res.json({ routine });
+});
 app.put('/api/profile', requireUser, (req, res) => { const profile = { ...req.body }; delete profile.email; db.prepare('UPDATE users SET profile_json = ? WHERE id = ?').run(JSON.stringify(profile), req.user.id); res.json({ profile }); });
 app.delete('/api/account', requireUser, (req, res) => { db.prepare('DELETE FROM users WHERE id = ?').run(req.user.id); res.setHeader('Set-Cookie', 'formkurva_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'); res.status(204).end(); });
 app.get('/api/admin/stats', requireUser, requireAdmin, (req, res) => res.json({ users: db.prepare('SELECT COUNT(*) AS count FROM users').get().count, admins: db.prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'admin'").get().count, measurements: db.prepare('SELECT COUNT(*) AS count FROM measurements').get().count }));

@@ -9,6 +9,7 @@ RUN npm ci --omit=dev
 COPY server.js ./
 COPY MyHome.html ./
 COPY admin.html ./
+COPY gym.html ./
 RUN mkdir -p /data
 
 EXPOSE 3000
