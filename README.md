@@ -26,6 +26,10 @@ docker compose up -d --build
 
 Logga in med `ADMIN_EMAIL` och `ADMIN_PASSWORD`. Adminrollen skapas automatiskt om kontot saknas. Öppna sedan **Admin** i menyn för att göra andra konton till administratörer eller vanliga användare. `.env` ska aldrig läggas upp på GitHub.
 
+Admin-sidan finns även direkt på `/admin.html` och innehåller kontostatistik, rollbyte, tvångsutloggning och radering av konton. Vanliga användare skickas bort från sidan automatiskt.
+
+På profilsidan finns lösenordsbyte, profilbild, mål och måttenhet. Historiken kan exporteras som JSON eller CSV och tidigare mätningar kan ändras.
+
 Vid vanlig HTTP i hemnätet ska `SECURE_COOKIES` vara `false`. När du lägger sidan bakom HTTPS ändrar du den till `true` och kör om containern.
 
 Databasen sparas i Docker-volymen `formkurva_data` och överlever omstart eller uppdatering av containern.

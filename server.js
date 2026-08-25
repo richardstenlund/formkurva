@@ -99,12 +99,20 @@ app.post('/api/auth/login', (req, res) => {
   createSession(user.id, res); res.json({ user: publicUser(user) });
 });
 app.post('/api/auth/logout', (req, res) => { const user = sessionUser(req); if (user) db.prepare('DELETE FROM sessions WHERE id = ?').run(user.session_id); res.setHeader('Set-Cookie', 'formkurva_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'); res.status(204).end(); });
+app.post('/api/auth/change-password', requireUser, (req, res) => {
+  const current = String(req.body.currentPassword || ''); const next = String(req.body.newPassword || '');
+  if (next.length < 8) return res.status(400).json({ error: 'Det nya lösenordet måste vara minst 8 tecken.' });
+  if (!safeEqual(hashPassword(current, req.user.password_salt).hash, req.user.password_hash)) return res.status(401).json({ error: 'Det nuvarande lösenordet stämmer inte.' });
+  const { salt, hash } = hashPassword(next); db.prepare('UPDATE users SET password_hash = ?, password_salt = ? WHERE id = ?').run(hash, salt, req.user.id); db.prepare('DELETE FROM sessions WHERE user_id = ? AND id != ?').run(req.user.id, req.user.session_id); res.json({ ok: true });
+});
 app.get('/api/measurements', requireUser, (req, res) => res.json({ measurements: db.prepare('SELECT id, date, data_json FROM measurements WHERE user_id = ? ORDER BY date DESC').all(req.user.id).map(row => ({ ...JSON.parse(row.data_json), id: row.id, date: row.date })) }));
 app.post('/api/measurements', requireUser, (req, res) => { if (!validMeasurement(req.body)) return res.status(400).json({ error: 'Ange datum och minst ett mått.' }); const id = crypto.randomUUID(); const { date, ...data } = req.body; db.prepare('INSERT INTO measurements (id, user_id, date, data_json) VALUES (?, ?, ?, ?)').run(id, req.user.id, date, JSON.stringify(data)); res.status(201).json({ id, date, ...data }); });
+app.put('/api/measurements/:id', requireUser, (req, res) => { if (!validMeasurement(req.body)) return res.status(400).json({ error: 'Ange datum och minst ett mått.' }); const { date, ...data } = req.body; const result = db.prepare('UPDATE measurements SET date = ?, data_json = ? WHERE id = ? AND user_id = ?').run(date, JSON.stringify(data), req.params.id, req.user.id); if (!result.changes) return res.status(404).json({ error: 'Mätningen hittades inte.' }); res.json({ id: req.params.id, date, ...data }); });
 app.delete('/api/measurements/:id', requireUser, (req, res) => { db.prepare('DELETE FROM measurements WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id); res.status(204).end(); });
 app.put('/api/profile', requireUser, (req, res) => { const profile = { ...req.body }; delete profile.email; db.prepare('UPDATE users SET profile_json = ? WHERE id = ?').run(JSON.stringify(profile), req.user.id); res.json({ profile }); });
 app.delete('/api/account', requireUser, (req, res) => { db.prepare('DELETE FROM users WHERE id = ?').run(req.user.id); res.setHeader('Set-Cookie', 'formkurva_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'); res.status(204).end(); });
-app.get('/api/admin/users', requireUser, requireAdmin, (req, res) => res.json({ users: db.prepare('SELECT id, email, role, created_at FROM users ORDER BY created_at ASC').all() }));
+app.get('/api/admin/stats', requireUser, requireAdmin, (req, res) => res.json({ users: db.prepare('SELECT COUNT(*) AS count FROM users').get().count, admins: db.prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'admin'").get().count, measurements: db.prepare('SELECT COUNT(*) AS count FROM measurements').get().count }));
+app.get('/api/admin/users', requireUser, requireAdmin, (req, res) => res.json({ users: db.prepare('SELECT users.id, users.email, users.role, users.created_at, COUNT(measurements.id) AS measurement_count FROM users LEFT JOIN measurements ON measurements.user_id = users.id GROUP BY users.id ORDER BY users.created_at ASC').all() }));
 app.patch('/api/admin/users/:id/role', requireUser, requireAdmin, (req, res) => {
   const role = req.body.role === 'admin' ? 'admin' : req.body.role === 'user' ? 'user' : '';
   const userId = Number(req.params.id);
@@ -116,5 +124,7 @@ app.patch('/api/admin/users/:id/role', requireUser, requireAdmin, (req, res) => 
   db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, userId);
   res.json({ id: target.id, email: target.email, role });
 });
+app.delete('/api/admin/users/:id', requireUser, requireAdmin, (req, res) => { const userId = Number(req.params.id); if (userId === req.user.id) return res.status(400).json({ error: 'Du kan inte radera ditt eget admin-konto här.' }); const target = db.prepare('SELECT id, role FROM users WHERE id = ?').get(userId); if (!target) return res.status(404).json({ error: 'Kontot hittades inte.' }); if (target.role === 'admin' && db.prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'admin'").get().count <= 1) return res.status(400).json({ error: 'Det måste alltid finnas minst en administratör.' }); db.prepare('DELETE FROM users WHERE id = ?').run(userId); res.status(204).end(); });
+app.post('/api/admin/users/:id/logout', requireUser, requireAdmin, (req, res) => { db.prepare('DELETE FROM sessions WHERE user_id = ?').run(Number(req.params.id)); res.status(204).end(); });
 app.use((error, req, res, next) => { console.error(error); res.status(500).json({ error: 'Ett oväntat serverfel uppstod.' }); });
 app.listen(port, () => console.log(`Formkurva kör på http://localhost:${port}`));
