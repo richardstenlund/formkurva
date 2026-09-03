@@ -34,7 +34,7 @@ Gym-sidan finns på `/gym.html`. Där kan användare välja bland övningar för
 
 Vid vanlig HTTP i hemnätet ska `SECURE_COOKIES` vara `false`. När du lägger sidan bakom HTTPS ändrar du den till `true` och kör om containern.
 
-Databasen sparas i Docker-volymen `formkurva_data` och överlever omstart eller uppdatering av containern.
+Databasen sparas i Docker-volymen `formkurva_data` och överlever omstart eller uppdatering av containern. När sidan körs via servern sparas användarkonton, profiler, teman, mätningar och träningsdata i SQLite på servern, inte i webbläsaren.
 
 ## Uppdatera
 
