@@ -1,0 +1,9 @@
+{
+  "name": "Formkurva",
+  "short_name": "Formkurva",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f6f1",
+  "theme_color": "#123e32",
+  "description": "Din personliga hälsa och träningshistorik"
+}

@@ -7,6 +7,8 @@ const app = express();
 const port = Number(process.env.PORT || 3000);
 const sessionDays = Math.max(1, Number(process.env.SESSION_DAYS || 30));
 const secureCookies = process.env.SECURE_COOKIES === 'true';
+const loginWindowMs = 15 * 60 * 1000;
+const loginAttempts = new Map();
 const db = new Database(process.env.DB_PATH || '/data/formkurva.db');
 db.pragma('journal_mode = WAL');
 db.exec(`
@@ -62,7 +64,10 @@ function ensureBootstrapAdmin() {
 ensureBootstrapAdmin();
 
 app.use(express.json({ limit: '8mb' }));
+app.disable('x-powered-by');
+app.use((req, res, next) => { res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('X-Frame-Options', 'SAMEORIGIN'); res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin'); res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()'); next(); });
 app.use(express.static(path.join(__dirname), { index: 'MyHome.html' }));
+setInterval(() => db.prepare('DELETE FROM sessions WHERE expires_at <= ?').run(Date.now()), 60 * 60 * 1000).unref();
 
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   return { salt, hash: crypto.scryptSync(password, salt, 64).toString('hex') };
@@ -110,8 +115,9 @@ app.post('/api/auth/register', (req, res) => {
   createSession(result.lastInsertRowid, res); res.status(201).json({ user: publicUser(db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid)) });
 });
 app.post('/api/auth/login', (req, res) => {
-  const email = String(req.body.email || '').trim().toLowerCase(); const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
-  if (!user || !safeEqual(hashPassword(String(req.body.password || ''), user.password_salt).hash, user.password_hash)) return res.status(401).json({ error: 'E-posten eller lösenordet stämmer inte.' });
+  const email = String(req.body.email || '').trim().toLowerCase(); const address = req.ip || 'unknown'; const attemptKey = address + ':' + email; const previous = loginAttempts.get(attemptKey) || { count: 0, started: Date.now() }; if (Date.now() - previous.started > loginWindowMs) { previous.count = 0; previous.started = Date.now(); } if (previous.count >= 8) return res.status(429).json({ error: 'För många försök. Vänta 15 minuter och försök igen.' }); const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  if (!user || !safeEqual(hashPassword(String(req.body.password || ''), user.password_salt).hash, user.password_hash)) { previous.count += 1; loginAttempts.set(attemptKey, previous); return res.status(401).json({ error: 'E-posten eller lösenordet stämmer inte.' }); }
+  loginAttempts.delete(attemptKey);
   createSession(user.id, res); res.json({ user: publicUser(user) });
 });
 app.post('/api/auth/logout', (req, res) => { const user = sessionUser(req); if (user) db.prepare('DELETE FROM sessions WHERE id = ?').run(user.session_id); res.setHeader('Set-Cookie', 'formkurva_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'); res.status(204).end(); });
@@ -126,6 +132,7 @@ app.post('/api/measurements', requireUser, (req, res) => { if (!validMeasurement
 app.put('/api/measurements/:id', requireUser, (req, res) => { if (!validMeasurement(req.body)) return res.status(400).json({ error: 'Ange datum och minst ett mått.' }); const { date, ...data } = req.body; const result = db.prepare('UPDATE measurements SET date = ?, data_json = ? WHERE id = ? AND user_id = ?').run(date, JSON.stringify(data), req.params.id, req.user.id); if (!result.changes) return res.status(404).json({ error: 'Mätningen hittades inte.' }); res.json({ id: req.params.id, date, ...data }); });
 app.delete('/api/measurements/:id', requireUser, (req, res) => { db.prepare('DELETE FROM measurements WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id); res.status(204).end(); });
 app.get('/api/workouts', requireUser, (req, res) => res.json({ workouts: db.prepare('SELECT id, date, exercise, muscle_group, sets, reps, weight, notes FROM workouts WHERE user_id = ? ORDER BY date DESC, rowid DESC').all(req.user.id) }));
+app.get('/api/workouts/stats', requireUser, (req, res) => { const total = db.prepare('SELECT COUNT(*) AS count, COALESCE(SUM(sets * reps * weight), 0) AS volume FROM workouts WHERE user_id = ?').get(req.user.id); const prs = db.prepare('SELECT exercise, MAX(weight) AS weight FROM workouts WHERE user_id = ? GROUP BY exercise ORDER BY weight DESC').all(req.user.id); res.json({ sessions: total.count, volume: total.volume, personalRecords: prs }); });
 app.post('/api/workouts', requireUser, (req, res) => { const data = req.body || {}; if (!data.date || !data.exercise || !data.muscleGroup || Number(data.sets) < 1 || Number(data.reps) < 1 || Number(data.weight) < 0) return res.status(400).json({ error: 'Fyll i datum, övning, set, reps och vikt.' }); const workout = { id: crypto.randomUUID(), date: String(data.date), exercise: String(data.exercise).slice(0, 100), muscle_group: String(data.muscleGroup).slice(0, 50), sets: Number(data.sets), reps: Number(data.reps), weight: Number(data.weight), notes: String(data.notes || '').slice(0, 500) }; db.prepare('INSERT INTO workouts (id, user_id, date, exercise, muscle_group, sets, reps, weight, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(workout.id, req.user.id, workout.date, workout.exercise, workout.muscle_group, workout.sets, workout.reps, workout.weight, workout.notes); res.status(201).json(workout); });
 app.delete('/api/workouts/:id', requireUser, (req, res) => { db.prepare('DELETE FROM workouts WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id); res.status(204).end(); });
 app.get('/api/routine', requireUser, (req, res) => { const row = db.prepare('SELECT routine_json FROM routines WHERE user_id = ?').get(req.user.id); res.json({ routine: row ? JSON.parse(row.routine_json) : { days: [] } }); });

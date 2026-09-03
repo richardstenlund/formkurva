@@ -13,6 +13,16 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
     volumes:
       - formkurva_data:/data
+  backup:
+    image: alpine:3.21
+    container_name: formkurva-backup
+    restart: unless-stopped
+    volumes:
+      - formkurva_data:/data:ro
+      - formkurva_backups:/backups
+    entrypoint: /bin/sh
+    command: -c 'while true; do mkdir -p /backups; tar czf /backups/formkurva-$$(date +%Y-%m-%d-%H%M).tar.gz -C /data .; find /backups -type f -mtime +14 -delete; sleep 86400; done'
 
 volumes:
   formkurva_data:
+  formkurva_backups:
