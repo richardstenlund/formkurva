@@ -1,4 +1,20 @@
 services:
+  db:
+    image: mariadb:11.4
+    container_name: formkurva-db
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - formkurva_db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
   formkurva:
     build: .
     container_name: formkurva
@@ -11,18 +27,28 @@ services:
       SECURE_COOKIES: "false"
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
-    volumes:
-      - formkurva_data:/data
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
   backup:
-    image: alpine:3.21
+    image: mariadb:11.4
     container_name: formkurva-backup
     restart: unless-stopped
-    volumes:
-      - formkurva_data:/data:ro
       - formkurva_backups:/backups
+    environment:
+      MARIADB_PWD: ${DB_ROOT_PASSWORD}
+      DB_NAME: ${DB_NAME}
+    depends_on:
+      db:
+        condition: service_healthy
     entrypoint: /bin/sh
-    command: -c 'while true; do mkdir -p /backups; tar czf /backups/formkurva-$$(date +%Y-%m-%d-%H%M).tar.gz -C /data .; find /backups -type f -mtime +14 -delete; sleep 86400; done'
+    command: -c 'while true; do mariadb-dump --host=db --user=root --databases $${DB_NAME:-formkurva} | gzip > /backups/formkurva-$$(date +%Y-%m-%d-%H%M).sql.gz; find /backups -type f -mtime +14 -delete; sleep 86400; done'
 
 volumes:
-  formkurva_data:
+  formkurva_db:
   formkurva_backups:

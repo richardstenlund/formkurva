@@ -1,6 +1,6 @@
 # Formkurva
 
-Hälsotracker med Node.js, Express och SQLite. Körs som en Docker-container och passar en Proxmox-VM eller LXC med Docker.
+Hälsotracker med Node.js, Express och MariaDB. Körs som Docker-containrar och passar en Proxmox-VM eller LXC med Docker.
 
 ## Starta på egen server
 
@@ -30,11 +30,11 @@ Admin-sidan finns även direkt på `/admin.html` och innehåller kontostatistik,
 
 På profilsidan finns lösenordsbyte, profilbild, mål och måttenhet. Historiken kan exporteras som JSON eller CSV och tidigare mätningar kan ändras.
 
-Gym-sidan finns på `/gym.html`. Där kan användare välja bland övningar för alla stora muskelgrupper, logga träningspass och bygga egna träningsdagar. Träningspassen och schemat sparas i SQLite via API:et.
+Gym-sidan finns på `/gym.html`. Där kan användare välja bland övningar för alla stora muskelgrupper, logga träningspass och bygga egna träningsdagar. Träningspassen och schemat sparas i MariaDB via API:et.
 
 Vid vanlig HTTP i hemnätet ska `SECURE_COOKIES` vara `false`. När du lägger sidan bakom HTTPS ändrar du den till `true` och kör om containern.
 
-Databasen sparas i Docker-volymen `formkurva_data` och överlever omstart eller uppdatering av containern. När sidan körs via servern sparas användarkonton, profiler, teman, mätningar och träningsdata i SQLite på servern, inte i webbläsaren.
+Databasen sparas i Docker-volymen `formkurva_db` och överlever omstart eller uppdatering av containern. När sidan körs via servern sparas användarkonton, profiler, teman, mätningar och träningsdata i MariaDB på servern, inte i webbläsaren.
 
 ## Uppdatera
 
@@ -45,13 +45,13 @@ docker compose up -d --build
 
 ## Säkerhetskopiera
 
-```bash
-docker run --rm -v formkurva_data:/data -v "$PWD":/backup alpine tar czf /backup/formkurva-data.tar.gz -C /data .
-```
+Backup-containern skapar automatiskt en komprimerad MariaDB-dump varje dygn och behåller 14 dagar. Filerna finns i volymen `formkurva_backups`.
+
+Manuell backup: `docker compose exec db mariadb-dump -u root -p formkurva > formkurva.sql`.
 
 ## Viktigt före internetpublicering
 
 - Lägg sidan bakom HTTPS via exempelvis Caddy, Nginx Proxy Manager eller Cloudflare Tunnel.
 - Ändra inte `SESSION_DAYS` till en lång period utan att förstå risken.
-- Exponera inte SQLite-filen direkt.
+- Exponera inte MariaDB-porten mot internet.
 - Den inbyggda kontofunktionen använder hashade lösenord och sessionscookies. Glömt lösenord och e-postutskick ingår inte ännu.
