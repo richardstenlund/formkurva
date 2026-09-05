@@ -39,6 +39,7 @@ services:
     image: mariadb:11.4
     container_name: formkurva-backup
     restart: unless-stopped
+    volumes:
       - formkurva_backups:/backups
     environment:
       MARIADB_PWD: ${DB_ROOT_PASSWORD}
