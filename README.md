@@ -34,7 +34,7 @@ Gym-sidan finns på `/gym.html`. Där kan användare välja bland övningar för
 
 Vid vanlig HTTP i hemnätet ska `SECURE_COOKIES` vara `false`. När du lägger sidan bakom HTTPS ändrar du den till `true` och kör om containern.
 
-Adminer körs på port `8080` för att administrera MariaDB via webbläsaren. Öppna `http://SERVERNS-IP:8080` från hemnätet. Logga in med server `db`, användare `formkurva`, databas `formkurva` och lösenordet från `DB_PASSWORD` i `.env`. Exponera inte Adminer mot internet utan HTTPS och extra åtkomstskydd.
+Adminer körs på port `8081` för att administrera MariaDB via webbläsaren. Öppna `http://SERVERNS-IP:8081` från hemnätet. Logga in med server `db`, användare `formkurva`, databas `formkurva` och lösenordet från `DB_PASSWORD` i `.env`. Exponera inte Adminer mot internet utan HTTPS och extra åtkomstskydd.
 
 Databasen sparas i Docker-volymen `formkurva_db` och överlever omstart eller uppdatering av containern. När sidan körs via servern sparas användarkonton, profiler, teman, mätningar och träningsdata i MariaDB på servern, inte i webbläsaren.
 
