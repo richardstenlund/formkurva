@@ -229,7 +229,7 @@
 		</main>
 	</div>
 	<div class="toast" id="toast">Mätningen är sparad.</div>
-	<div class="modal-backdrop" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title"><section class="modal"><div class="modal-heading"><div><h2 id="auth-title">Logga in</h2><p id="auth-description">Spara och följ dina resultat på den här enheten.</p></div><button class="close-button" id="close-auth" aria-label="Stäng">×</button></div><form class="auth-form" id="auth-form"><label>E-post<input type="email" name="email" required placeholder="du@exempel.se"></label><label>Lösenord<input type="password" name="password" required minlength="8" placeholder="Minst 8 tecken"></label><div class="auth-error" id="auth-error"></div><button class="save-button" type="submit" id="auth-submit">Logga in</button></form><p class="auth-switch" id="auth-switch">Ny här? <button type="button">Skapa konto</button></p><p class="account-note">Kontot sparas lokalt i denna webbläsare. Använd inte ett lösenord du har någon annanstans.</p></section></div>
+	<div class="modal-backdrop" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title"><section class="modal"><div class="modal-heading"><div><h2 id="auth-title">Logga in</h2><p id="auth-description">Spara och följ dina resultat på den här enheten.</p></div><button class="close-button" id="close-auth" aria-label="Stäng">×</button></div><form class="auth-form" id="auth-form"><label>E-post<input type="email" name="email" required placeholder="du@exempel.se"></label><label>Lösenord<input type="password" name="password" required minlength="8" placeholder="Minst 8 tecken"></label><div class="auth-error" id="auth-error"></div><button class="save-button" type="submit" id="auth-submit">Logga in</button></form><form class="auth-form" id="reset-form" hidden><label>E-post<input type="email" name="email" required placeholder="du@exempel.se"></label><button class="account-button primary" type="submit" id="request-reset-code">Skicka återställningslänk</button><div class="auth-error" id="reset-error"></div><p class="account-note">Vi skickar en länk till din e-post så att du kan välja ett nytt lösenord.</p></form><p class="auth-switch" id="auth-switch">Ny här? <button type="button">Skapa konto</button></p><p class="auth-switch" id="forgot-password-link-wrapper"><button type="button" id="forgot-password-link">Jag har glömt lösenordet</button></p><p class="auth-switch" id="reset-back-wrapper" hidden><button type="button" id="reset-back">Tillbaka till inloggning</button></p><p class="account-note">Kontot sparas lokalt i denna webbläsare. Använd inte ett lösenord du har någon annanstans.</p></section></div>
 	<script>
 		const storagePrefix = 'formkurva-measurements-';
 		const accountsKey = 'formkurva-accounts';
@@ -285,6 +285,12 @@
 		function renderGoal() { const profile = getProfile(); const latest = [...measurements].sort((a, b) => new Date(a.date) - new Date(b.date)).at(-1); const progress = document.getElementById('goal-progress'); const goal = Number(profile.goalWeight); const weight = Number(latest?.weight); if (!goal || !weight) { progress.innerHTML = '<strong>Inget mål ännu</strong>Ange en målvikt för att följa din utveckling.'; return; } const remaining = weight - goal; progress.innerHTML = '<strong>' + (remaining > 0 ? remaining.toFixed(1).replace('.', ',') + ' kg kvar' : 'Målet är uppnått') + '</strong>' + (remaining > 0 ? 'Från senaste vikt på ' + weight.toFixed(1).replace('.', ',') + ' kg.' : 'Bra jobbat med din utveckling.'); }
 		const authModal = document.getElementById('auth-modal');
 		const authForm = document.getElementById('auth-form');
+		const resetForm = document.getElementById('reset-form');
+		const resetError = document.getElementById('reset-error');
+		const forgotPasswordLink = document.getElementById('forgot-password-link');
+		const resetBack = document.getElementById('reset-back');
+		const forgotPasswordLinkWrapper = document.getElementById('forgot-password-link-wrapper');
+		const resetBackWrapper = document.getElementById('reset-back-wrapper');
 		let isRegistering = false;
 		let activePeriodMonths = 1;
 		let currentMetric = 'weight';
@@ -302,13 +308,51 @@
 			document.getElementById('admin-nav').style.display = currentRole === 'admin' ? 'flex' : 'none';
 			document.getElementById('admin').style.display = currentRole === 'admin' ? 'block' : 'none';
 		}
-		function openAuth(register = false) { isRegistering = register; document.getElementById('auth-title').textContent = register ? 'Skapa konto' : 'Logga in'; document.getElementById('auth-description').textContent = register ? 'Skapa en lokal profil för att spara dina resultat.' : 'Spara och följ dina resultat på den här enheten.'; document.getElementById('auth-submit').textContent = register ? 'Skapa konto' : 'Logga in'; document.getElementById('auth-switch').innerHTML = register ? 'Har du redan konto? <button type="button">Logga in</button>' : 'Ny här? <button type="button">Skapa konto</button>'; document.getElementById('auth-error').textContent = ''; authForm.reset(); authModal.classList.add('open'); }
+		function showAuthForm(mode) {
+			authForm.hidden = mode !== 'login';
+			resetForm.hidden = mode !== 'reset';
+			forgotPasswordLinkWrapper.hidden = mode === 'reset';
+			resetBackWrapper.hidden = mode !== 'reset';
+			document.getElementById('auth-error').textContent = '';
+			resetError.textContent = '';
+			if (mode === 'login') {
+				document.getElementById('auth-title').textContent = isRegistering ? 'Skapa konto' : 'Logga in';
+				document.getElementById('auth-description').textContent = isRegistering ? 'Skapa en lokal profil för att spara dina resultat.' : 'Spara och följ dina resultat på den här enheten.';
+				document.getElementById('auth-submit').textContent = isRegistering ? 'Skapa konto' : 'Logga in';
+				document.getElementById('auth-switch').innerHTML = isRegistering ? 'Har du redan konto? <button type="button">Logga in</button>' : 'Ny här? <button type="button">Skapa konto</button>';
+			} else {
+				document.getElementById('auth-title').textContent = 'Återställ lösenord';
+				document.getElementById('auth-description').textContent = 'Skriv in din e-post så skickar vi en återställningslänk.';
+			}
+			if (mode === 'login') authForm.reset();
+			if (mode === 'reset') resetForm.reset();
+		}
+		function openAuth(register = false) { isRegistering = register; showAuthForm('login'); authModal.classList.add('open'); }
 		document.getElementById('login-button').addEventListener('click', () => openAuth());
 		document.getElementById('close-auth').addEventListener('click', () => authModal.classList.remove('open'));
 		authModal.addEventListener('click', event => { if (event.target === authModal) authModal.classList.remove('open'); });
-		document.getElementById('auth-switch').addEventListener('click', () => openAuth(!isRegistering));
+		document.getElementById('auth-switch').addEventListener('click', () => { isRegistering = !isRegistering; showAuthForm('login'); });
+		forgotPasswordLink.addEventListener('click', () => showAuthForm('reset'));
+		resetBack.addEventListener('click', () => showAuthForm('login'));
 		document.getElementById('logout-button').addEventListener('click', async () => { if (serverMode) { await api('/auth/logout', { method: 'POST' }).catch(handleApiError); } currentUser = ''; sessionUserId = ''; currentRole = ''; currentProfile = {}; measurements = serverMode ? [] : JSON.parse(localStorage.getItem(storageKey()) || '[]'); updateAccountUi(); applyTheme(); renderProfile(); render(); showToast('Du är utloggad.'); });
 		authForm.addEventListener('submit', async event => { event.preventDefault(); const data = Object.fromEntries(new FormData(authForm)); const error = document.getElementById('auth-error'); if (serverMode) { try { const result = await api(isRegistering ? '/auth/register' : '/auth/login', { method: 'POST', body: JSON.stringify(data) }); currentUser = result.user.email; sessionUserId = result.user.id; currentRole = result.user.role || 'user'; currentProfile = result.user.profile || {}; measurements = (await api('/measurements')).measurements; updateAccountUi(); applyTheme(); renderProfile(); render(); if (currentRole === 'admin') loadAdminUsers(); authModal.classList.remove('open'); showToast(isRegistering ? 'Kontot är skapat.' : 'Du är inloggad.'); } catch (requestError) { error.textContent = requestError.message; } return; } const accounts = JSON.parse(localStorage.getItem(accountsKey) || '{}'); if (isRegistering && accounts[data.email]) { error.textContent = 'Det finns redan ett konto med den e-posten.'; return; } if (!isRegistering && (!accounts[data.email] || accounts[data.email] !== data.password)) { error.textContent = 'E-posten eller lösenordet stämmer inte.'; return; } if (isRegistering) accounts[data.email] = data.password; localStorage.setItem(accountsKey, JSON.stringify(accounts)); currentUser = data.email; localStorage.setItem('formkurva-current-user', currentUser); measurements = JSON.parse(localStorage.getItem(storageKey()) || '[]'); updateAccountUi(); renderProfile(); render(); authModal.classList.remove('open'); showToast(isRegistering ? 'Kontot är skapat.' : 'Du är inloggad.'); });
+		resetForm.addEventListener('submit', async event => {
+			event.preventDefault();
+			const formData = Object.fromEntries(new FormData(resetForm));
+			if (!formData.email) {
+				resetError.textContent = 'Ange din e-postadress först.';
+				return;
+			}
+			try {
+				const result = await api('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email: formData.email }) });
+				resetError.textContent = result.resetLink ? `${result.message} ${result.resetLink}` : result.message || 'Återställningslänken har skapats.';
+				if (result.resetLink) {
+					showToast('Återställningslänken visas i meddelandet.');
+				}
+			} catch (error) {
+				resetError.textContent = error.message;
+			}
+		});
 		profileForm.addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(true); return; } const profile = Object.fromEntries(new FormData(profileForm)); delete profile.email; try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); currentProfile = result.profile; } else localStorage.setItem(profileKey(), JSON.stringify(profile)); updateAccountUi(); applyTheme(); renderProfile(); renderHealth(); renderGoal(); showToast('Profilen är uppdaterad.'); } catch (error) { handleApiError(error); } });
 		document.getElementById('goal-form').addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(true); return; } const goal = Object.fromEntries(new FormData(event.target)); const profile = getProfile(); Object.assign(profile, goal); try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); currentProfile = result.profile; } else localStorage.setItem(profileKey(), JSON.stringify(profile)); renderProfile(); renderGoal(); showToast('Målet är sparat.'); } catch (error) { handleApiError(error); } });
 		document.getElementById('reminder-form').addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(true); return; } const reminder = Object.fromEntries(new FormData(event.target)); const profile = getProfile(); Object.assign(profile, reminder); try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); currentProfile = result.profile; } else localStorage.setItem(profileKey(), JSON.stringify(profile)); renderProfile(); showToast('Påminnelsen är sparad.'); } catch (error) { handleApiError(error); } });
