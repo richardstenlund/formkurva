@@ -177,7 +177,6 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname), { index: 'MyHome.html' }));
 setInterval(() => pool.query('DELETE FROM sessions WHERE expires_at <= $1', [Date.now()]).catch(console.error), 60 * 60 * 1000).unref();
 
-<<<<<<< HEAD
 app.get('/api/health', async (req, res, next) => {
   try {
     await pool.query('SELECT 1');
@@ -444,7 +443,6 @@ app.use((error, req, res, next) => {
   console.error(error);
   res.status(500).json({ error: 'Ett oväntat serverfel uppstod.' });
 });
->>>>>>> 7aad4b8 (Switch to PostgreSQL)
 
 initDatabase().then(() => app.listen(port, () => console.log(`Formkurva kör på http://localhost:${port}`))).catch(error => {
   console.error('Databasen kunde inte startas:', error);
