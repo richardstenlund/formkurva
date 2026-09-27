@@ -30,6 +30,8 @@ Admin-sidan finns även direkt på `/admin.html` och innehåller kontostatistik,
 
 På profilsidan finns lösenordsbyte, profilbild, mål och måttenhet. Historiken kan exporteras som JSON eller CSV och tidigare mätningar kan ändras.
 
+Glömt lösenord finns på inloggningen. Fyll i `SMTP_*` och `APP_URL` i `.env` för att skicka återställningslänken med e-post. Utan SMTP loggas länken i serverloggen och visas bara i utvecklingsläge.
+
 Gym-sidan finns på `/gym.html`. Där kan användare välja bland övningar för alla stora muskelgrupper, logga träningspass och bygga egna träningsdagar. Träningspassen och schemat sparas i MariaDB via API:et.
 
 Vid vanlig HTTP i hemnätet ska `SECURE_COOKIES` vara `false`. När du lägger sidan bakom HTTPS ändrar du den till `true` och kör om containern.
@@ -56,4 +58,4 @@ Manuell backup: `docker compose exec db mariadb-dump -u root -p formkurva > form
 - Lägg sidan bakom HTTPS via exempelvis Caddy, Nginx Proxy Manager eller Cloudflare Tunnel.
 - Ändra inte `SESSION_DAYS` till en lång period utan att förstå risken.
 - Exponera inte MariaDB-porten mot internet.
-- Den inbyggda kontofunktionen använder hashade lösenord och sessionscookies. Glömt lösenord och e-postutskick ingår inte ännu.
+- Den inbyggda kontofunktionen använder hashade lösenord och sessionscookies. Konfigurera SMTP innan du litar på glömt-lösenord mot internet.
