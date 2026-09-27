@@ -1,6 +1,6 @@
 # Formkurva
 
-Hälsotracker med Node.js, Express och MariaDB. Körs som Docker-containrar och passar en Proxmox-VM eller LXC med Docker.
+Hälsotracker med Node.js, Express och PostgreSQL. Körs som Docker-containrar och passar en Proxmox-VM eller LXC med Docker.
 
 ## Starta på egen server
 
@@ -32,13 +32,13 @@ På profilsidan finns lösenordsbyte, profilbild, mål och måttenhet. Historike
 
 Glömt lösenord finns på inloggningen. Fyll i `SMTP_*` och `APP_URL` i `.env` för att skicka återställningslänken med e-post. Utan SMTP loggas länken i serverloggen och visas bara i utvecklingsläge.
 
-Gym-sidan finns på `/gym.html`. Där kan användare välja bland övningar för alla stora muskelgrupper, logga träningspass och bygga egna träningsdagar. Träningspassen och schemat sparas i MariaDB via API:et.
+Gym-sidan finns på `/gym.html`. Där kan användare välja bland övningar för alla stora muskelgrupper, logga träningspass och bygga egna träningsdagar. Träningspassen och schemat sparas i PostgreSQL via API:et.
 
 Vid vanlig HTTP i hemnätet ska `SECURE_COOKIES` vara `false`. När du lägger sidan bakom HTTPS ändrar du den till `true` och kör om containern.
 
-Adminer körs på port `8081` för att administrera MariaDB via webbläsaren. Öppna `http://SERVERNS-IP:8081` från hemnätet. Logga in med server `db`, användare `formkurva`, databas `formkurva` och lösenordet från `DB_PASSWORD` i `.env`. Exponera inte Adminer mot internet utan HTTPS och extra åtkomstskydd.
+Adminer körs på port `8081` för att administrera PostgreSQL via webbläsaren. Öppna `http://SERVERNS-IP:8081` från hemnätet. Logga in med server `db`, driver `PostgreSQL`, användare `formkurva`, databas `formkurva` och lösenordet från `DB_PASSWORD` i `.env`. Exponera inte Adminer mot internet utan HTTPS och extra åtkomstskydd.
 
-Databasen sparas i Docker-volymen `formkurva_db` och överlever omstart eller uppdatering av containern. När sidan körs via servern sparas användarkonton, profiler, teman, mätningar och träningsdata i MariaDB på servern, inte i webbläsaren.
+Databasen sparas i Docker-volymen `formkurva_db` och överlever omstart eller uppdatering av containern. När sidan körs via servern sparas användarkonton, profiler, teman, mätningar och träningsdata i PostgreSQL på servern, inte i webbläsaren.
 
 ## Uppdatera
 
@@ -49,13 +49,17 @@ docker compose up -d --build
 
 ## Säkerhetskopiera
 
-Backup-containern skapar automatiskt en komprimerad MariaDB-dump varje dygn och behåller 14 dagar. Filerna finns i volymen `formkurva_backups`.
+Backup-containern skapar automatiskt en komprimerad PostgreSQL-dump varje dygn och behåller 14 dagar. Filerna finns i volymen `formkurva_backups`.
 
-Manuell backup: `docker compose exec db mariadb-dump -u root -p formkurva > formkurva.sql`.
+Manuell backup:
+
+```bash
+docker compose exec db pg_dump -U formkurva -d formkurva > formkurva.sql
+```
 
 ## Viktigt före internetpublicering
 
 - Lägg sidan bakom HTTPS via exempelvis Caddy, Nginx Proxy Manager eller Cloudflare Tunnel.
 - Ändra inte `SESSION_DAYS` till en lång period utan att förstå risken.
-- Exponera inte MariaDB-porten mot internet.
+- Exponera inte PostgreSQL-porten mot internet.
 - Den inbyggda kontofunktionen använder hashade lösenord och sessionscookies. Konfigurera SMTP innan du litar på glömt-lösenord mot internet.

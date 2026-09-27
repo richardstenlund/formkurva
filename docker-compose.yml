@@ -1,17 +1,16 @@
 services:
   db:
-    image: mariadb:11.4
+    image: postgres:16-alpine
     container_name: formkurva-db
     restart: unless-stopped
     environment:
-      MARIADB_DATABASE: ${DB_NAME}
-      MARIADB_USER: ${DB_USER}
-      MARIADB_PASSWORD: ${DB_PASSWORD}
-      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - formkurva_db:/var/lib/mysql
+      - formkurva_db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -28,7 +27,7 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       DB_HOST: db
-      DB_PORT: 3306
+      DB_PORT: 5432
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -50,23 +49,26 @@ services:
       - "8081:8080"
     environment:
       ADMINER_DEFAULT_SERVER: db
+      ADMINER_DEFAULT_DB: ${DB_NAME}
+      ADMINER_DEFAULT_DRIVER: pgsql
     depends_on:
       db:
         condition: service_healthy
   backup:
-    image: mariadb:11.4
+    image: postgres:16-alpine
     container_name: formkurva-backup
     restart: unless-stopped
     volumes:
       - formkurva_backups:/backups
     environment:
-      MARIADB_PWD: ${DB_ROOT_PASSWORD}
+      PGPASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
     depends_on:
       db:
         condition: service_healthy
     entrypoint: /bin/sh
-    command: -c 'while true; do mariadb-dump --host=db --user=root --databases $${DB_NAME:-formkurva} | gzip > /backups/formkurva-$$(date +%Y-%m-%d-%H%M).sql.gz; find /backups -type f -mtime +14 -delete; sleep 86400; done'
+    command: -c 'while true; do pg_dump -h db -U "$${DB_USER}" -d "$${DB_NAME}" | gzip > /backups/formkurva-$$(date +%Y-%m-%d-%H%M).sql.gz; find /backups -type f -mtime +14 -delete; sleep 86400; done'
 
 volumes:
   formkurva_db:

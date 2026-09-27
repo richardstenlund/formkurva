@@ -113,6 +113,20 @@
 		.admin-table th:first-child, .admin-table td:first-child { padding-left: 0; }
 		.role-select { padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--white); color: var(--ink); font-size: 11px; }
 		.admin-message { margin-top: 13px; color: var(--muted); font-size: 11px; }
+		.dashboard-insights { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin: 0 0 24px; }
+		.insight-card { min-width: 0; }
+		.badge-list, .pr-list, .plan-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+		.badge-item { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #f8fbf8; }
+		.badge-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: var(--mint); font-size: 19px; }
+		.badge-item strong { display: block; font-size: 12px; }
+		.badge-item small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+		.pr-list li, .plan-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #edf0ec; }
+		.pr-list li:last-child, .plan-list li:last-child { border-bottom: 0; }
+		.pr-list strong, .plan-list strong { display: block; font-size: 12px; }
+		.pr-list small, .plan-list small { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+		.pr-score { color: var(--green); font-size: 12px; font-weight: 700; }
+		.mini-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 999px; background: var(--paper); color: var(--green-dark); font-size: 10px; font-weight: 700; }
+		@media (max-width: 900px) { .dashboard-insights { grid-template-columns: 1fr; } }
 		@media (max-width: 650px) { .profile-layout { grid-template-columns: 1fr; gap: 15px; } .profile-identity { display: grid; grid-template-columns: auto 1fr; column-gap: 15px; } .profile-avatar-large { grid-row: span 2; } }
 		@media (max-width: 900px) { .app-shell { grid-template-columns: 1fr; } .sidebar { padding: 16px 20px; } .brand { padding: 0 0 15px; } nav { display: flex; overflow-x: auto; } .nav-label, .sidebar-bottom { display: none; } .nav-item { white-space: nowrap; } main { padding: 28px 18px; } .stats { grid-template-columns: 1fr 1fr; } .content-grid, .feature-grid { grid-template-columns: 1fr; } .history { grid-column: auto; } }
 		@media (max-width: 520px) { .topbar { display: block; } .date-badge { width: fit-content; margin-top: 14px; } .account-actions { margin-top: 14px; } .stats { gap: 10px; } .stat-card { min-height: 112px; padding: 15px; } .stat-value { font-size: 23px; } .panel { padding: 18px; } .panel-heading { align-items: flex-start; flex-direction: column; } .periods { align-self: stretch; justify-content: space-between; } .chart { gap: 5px; } .chart-labels { gap: 5px; } .history-table { display: block; overflow-x: auto; white-space: nowrap; } }
@@ -147,12 +161,25 @@
 				<article class="stat-card"><div class="stat-name">Midja</div><div class="stat-value" id="waist-stat">— cm</div><div class="stat-change" id="waist-change">Ingen tidigare data</div></article>
 				<article class="stat-card"><div class="stat-name">Bröst</div><div class="stat-value" id="chest-stat">— cm</div><div class="stat-change" id="chest-change">Ingen tidigare data</div></article>
 				<article class="stat-card"><div class="stat-name">Överarm</div><div class="stat-value" id="arm-stat">— cm</div><div class="stat-change" id="arm-change">Ingen tidigare data</div></article>
+			<article class="stat-card"><div class="stat-name">Veckostreak</div><div class="stat-value" id="streak-stat">0 dagar</div><div class="stat-change" id="streak-change">Ingen aktivitet ännu</div></article>
 			</section>
 
-			<div class="content-grid">
-				<section class="panel"><div class="panel-heading"><div><h2 id="chart-title">Vikt över tid</h2><p class="panel-subtitle">Följ trenden, inte bara siffran.</p></div><div class="periods"><select id="chart-metric" aria-label="Välj mått"><option value="weight">Vikt</option><option value="waist">Midja</option><option value="chest">Bröst</option><option value="arm">Överarm</option><option value="thigh">Lår</option><option value="hip">Höft</option></select><button class="period active" data-months="1">1 mån</button><button class="period" data-months="3">3 mån</button><button class="period" data-months="6">6 mån</button></div></div><div class="chart" id="chart"></div><div class="chart-labels" id="chart-labels"></div><div class="legend"><span><i class="orange"></i>Senaste mätning</span><span><i></i>Äldre mätningar</span></div></section>
+			<section class="dashboard-insights" id="dashboard-insights">
+				<article class="panel insight-card">
+					<div class="panel-heading"><div><h2>Motivation & badges</h2><p class="panel-subtitle">Dina små vinster som samlas över tid.</p></div></div>
+					<div class="badge-list" id="badge-list"></div>
+				</article>
+				<article class="panel insight-card">
+					<div class="panel-heading"><div><h2>PR & övningar</h2><p class="panel-subtitle">Vilken övning lyfter du högst just nu?</p></div></div>
+					<ul class="pr-list" id="pr-list"></ul>
+				</article>
+				<article class="panel insight-card">
+					<div class="panel-heading"><div><h2>Veckans fokus</h2><p class="panel-subtitle">Ett enkelt träningsplan för nästa cykel.</p></div></div>
+					<ul class="plan-list" id="training-plan"></ul>
+				</article>
+			</section>
 
-				<section class="panel form-panel" id="new-measurement"><div class="panel-heading"><div><h2>Ny mätning</h2><p class="panel-subtitle">Fyll i det du vill följa idag.</p></div></div><form class="measurement-form" id="measurement-form"><label>Datum<input type="date" name="date" id="date-input" required></label><div class="field-grid"><label>Kroppsvikt<div class="unit-input"><input type="number" name="weight" step="0.1" min="0" placeholder="0.0"><span>kg</span></div></label><label>Midja<div class="unit-input"><input type="number" name="waist" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Bröst<div class="unit-input"><input type="number" name="chest" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Överarm<div class="unit-input"><input type="number" name="arm" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Lår<div class="unit-input"><input type="number" name="thigh" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Höft<div class="unit-input"><input type="number" name="hip" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label></div><button class="save-button" type="submit">Spara mätning <span>→</span></button></form></section>
+			<section class="panel form-panel" id="new-measurement"><div class="panel-heading"><div><h2>Ny mätning</h2><p class="panel-subtitle">Fyll i det du vill följa idag.</p></div></div><form class="measurement-form" id="measurement-form"><label>Datum<input type="date" name="date" id="date-input" required></label><div class="field-grid"><label>Kroppsvikt<div class="unit-input"><input type="number" name="weight" step="0.1" min="0" placeholder="0.0"><span>kg</span></div></label><label>Midja<div class="unit-input"><input type="number" name="waist" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Bröst<div class="unit-input"><input type="number" name="chest" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Överarm<div class="unit-input"><input type="number" name="arm" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Lår<div class="unit-input"><input type="number" name="thigh" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Höft<div class="unit-input"><input type="number" name="hip" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label></div><button class="save-button" type="submit">Spara mätning <span>→</span></button></form></section>
 
 				<section class="panel history" id="history"><div class="panel-heading"><div><h2>Senaste mätningar</h2><p class="panel-subtitle">Din historik, samlad på ett ställe.</p></div><div><button class="export-button" id="export-button">↓ JSON</button><button class="export-button" id="export-csv">↓ CSV</button></div></div><div id="history-content"></div></section>
 
@@ -220,10 +247,52 @@
 		async function loadAdminUsers() { if (!serverMode || currentRole !== 'admin') return; try { const result = await api('/admin/users'); document.getElementById('admin-users').innerHTML = '<table class="admin-table"><thead><tr><th>E-post</th><th>Skapad</th><th>Roll</th></tr></thead><tbody>' + result.users.map(user => '<tr><td>' + user.email + (user.id === Number(sessionUserId) ? ' (du)' : '') + '</td><td>' + new Date(user.created_at).toLocaleDateString('sv-SE') + '</td><td><select class="role-select" data-user-id="' + user.id + '" data-original-role="' + user.role + '"' + (user.id === Number(sessionUserId) ? ' disabled' : '') + '><option value="user"' + (user.role === 'user' ? ' selected' : '') + '>Vanlig användare</option><option value="admin"' + (user.role === 'admin' ? ' selected' : '') + '>Administratör</option></select></td></tr>').join('') + '</tbody></table>'; document.querySelectorAll('.role-select').forEach(select => select.addEventListener('change', changeUserRole)); } catch (error) { document.getElementById('admin-users').innerHTML = '<div class="empty-state">' + error.message + '</div>'; } }
 		let sessionUserId = '';
 		async function changeUserRole(event) { const select = event.target; try { await api('/admin/users/' + select.dataset.userId + '/role', { method: 'PATCH', body: JSON.stringify({ role: select.value }) }); showToast('Användarrollen är uppdaterad.'); } catch (error) { select.value = select.dataset.originalRole; handleApiError(error); } }
+		function calculateStreak() {
+			const uniqueDates = new Set((measurements || []).map(item => item.date).filter(Boolean));
+			if (!uniqueDates.size) return 0;
+			let streak = 0;
+			const cursor = new Date();
+			cursor.setHours(12, 0, 0, 0);
+			while (true) {
+				const iso = cursor.toISOString().slice(0, 10);
+				if (uniqueDates.has(iso)) {
+					streak += 1;
+					cursor.setDate(cursor.getDate() - 1);
+				} else {
+					break;
+				}
+			}
+			return streak;
+		}
+		function renderStreakSummary() {
+			const streak = calculateStreak();
+			const streakValue = document.getElementById('streak-stat');
+			const streakChange = document.getElementById('streak-change');
+			streakValue.textContent = streak + ' dag' + (streak === 1 ? '' : 'ar');
+			if (!streak) {
+				streakChange.textContent = 'Ingen aktivitet ännu';
+				return;
+			}
+			const lastDate = [...measurements].sort((a, b) => new Date(b.date) - new Date(a.date))[0]?.date;
+			streakChange.textContent = lastDate ? 'Senaste mätning: ' + new Date(lastDate + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }) : 'Aktiv idag';
+		}
 		function renderHealth() {
 			const profile = getProfile(); const latest = [...measurements].sort((a, b) => new Date(a.date) - new Date(b.date)).at(-1); const height = Number(profile.height) / 100; const weight = Number(latest?.weight); const waist = Number(latest?.waist); const summary = document.getElementById('health-summary');
 			if (!height || !weight) { summary.innerHTML = '<div class="empty-state">Lägg till längd i profilen och vikt i en mätning för att se sammanfattningen.</div>'; return; }
-			const bmi = weight / (height * height); const ratio = waist ? (waist / Number(profile.height)).toFixed(2).replace('.', ',') : null; summary.innerHTML = '<div class="metric-row"><span>BMI</span><div class="metric-track"><div class="metric-fill" style="width:' + Math.min(100, bmi / 35 * 100) + '%"></div></div><strong class="metric-value">' + bmi.toFixed(1).replace('.', ',') + '</strong></div>' + (ratio ? '<div class="metric-row"><span>Midja/längd</span><div class="metric-track"><div class="metric-fill" style="width:' + Math.min(100, Number(ratio.replace(',', '.')) / .7 * 100) + '%"></div></div><strong class="metric-value">' + ratio + '</strong></div>' : '<div class="empty-state">Lägg till midjemått för midja/längd-kvot.</div>');
+			const bmi = weight / (height * height);
+			const ratio = waist ? (waist / Number(profile.height)).toFixed(2).replace('.', ',') : null;
+			const last7Days = measurements.filter(item => {
+				const date = new Date(item.date + 'T12:00:00');
+				const daysAgo = (Date.now() - date.getTime()) / 86400000;
+				return daysAgo <= 7 && daysAgo >= 0;
+			}).length;
+			const trend = measurements.length > 1 ? ((Number(latest.weight) - Number(measurements[0].weight)) || 0) : 0;
+			const readiness = Math.min(100, Math.max(20, Math.round((last7Days / 4) * 100 + (trend < 0 ? 15 : 5))));
+			summary.innerHTML = '<div class="metric-row"><span>BMI</span><div class="metric-track"><div class="metric-fill" style="width:' + Math.min(100, bmi / 35 * 100) + '%"></div></div><strong class="metric-value">' + bmi.toFixed(1).replace('.', ',') + '</strong></div>' +
+				(ratio ? '<div class="metric-row"><span>Midja/längd</span><div class="metric-track"><div class="metric-fill" style="width:' + Math.min(100, Number(ratio.replace(',', '.')) / .7 * 100) + '%"></div></div><strong class="metric-value">' + ratio + '</strong></div>' : '<div class="empty-state">Lägg till midjemått för midja/längd-kvot.</div>') +
+				'<div class="metric-row"><span>Veckofrekvens</span><div class="metric-track"><div class="metric-fill" style="width:' + Math.min(100, (last7Days / 7) * 100) + '%"></div></div><strong class="metric-value">' + last7Days + '/7</strong></div>' +
+				'<div class="metric-row"><span>Förberedelse</span><div class="metric-track"><div class="metric-fill" style="width:' + readiness + '%"></div></div><strong class="metric-value">' + readiness + '%</strong></div>' +
+				'<div class="health-note">Trend: ' + (trend < 0 ? 'Du går ner i vikt ' + Math.abs(trend).toFixed(1).replace('.', ',') + ' kg sedan första mätning.' : trend > 0 ? 'Du har ökat med ' + trend.toFixed(1).replace('.', ',') + ' kg sedan första mätning.' : 'Din vikt är stabil över tid.') + '</div>';
 		}
 		function renderGoal() { const profile = getProfile(); const latest = [...measurements].sort((a, b) => new Date(a.date) - new Date(b.date)).at(-1); const progress = document.getElementById('goal-progress'); const goal = Number(profile.goalWeight); const weight = Number(latest?.weight); if (!goal || !weight) { progress.innerHTML = '<strong>Inget mål ännu</strong>Ange en målvikt för att följa din utveckling.'; return; } const remaining = weight - goal; progress.innerHTML = '<strong>' + (remaining > 0 ? remaining.toFixed(1).replace('.', ',') + ' kg kvar' : 'Målet är uppnått') + '</strong>' + (remaining > 0 ? 'Från senaste vikt på ' + weight.toFixed(1).replace('.', ',') + ' kg.' : 'Bra jobbat med din utveckling.'); }
 		const authModal = document.getElementById('auth-modal');
@@ -335,7 +404,7 @@
 			const unit = currentMetric === 'weight' ? 'kg' : 'cm';
 			chart.innerHTML = chartData.length ? chartData.map((item, index) => '<div class="bar-wrap"><div class="bar ' + (index === chartData.length - 1 ? 'current' : '') + '" style="height:' + Math.max(8, ((Number(item[currentMetric]) - min) / (max - min)) * 100) + '%" title="' + formatNumber(item[currentMetric], unit) + '"></div></div>').join('') : '<div class="empty-state">Spara mätningar inom vald period för att se din trend.</div>';
 			labels.innerHTML = chartData.map(item => '<span>' + new Date(item.date + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }) + '</span>').join('');
-			renderHealth(); renderGoal();
+			renderHealth(); renderGoal(); renderStreakSummary();
 			const history = document.getElementById('history-content');
 			history.innerHTML = measurements.length ? '<table class="history-table"><thead><tr><th>Datum</th><th>Vikt</th><th>Midja</th><th>Bröst</th><th>Överarm</th><th></th></tr></thead><tbody>' + [...measurements].sort((a,b) => new Date(b.date) - new Date(a.date)).map(item => '<tr><td>' + new Date(item.date + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' }) + '</td><td>' + formatNumber(item.weight, 'kg') + '</td><td>' + formatNumber(item.waist, 'cm') + '</td><td>' + formatNumber(item.chest, 'cm') + '</td><td>' + formatNumber(item.arm, 'cm') + '</td><td><button class="account-button" onclick="editMeasurement(\'' + item.id + '\')">Ändra</button><button class="delete-button" aria-label="Ta bort mätning" onclick="removeMeasurement(\'' + item.id + '\')">×</button></td></tr>').join('') + '</tbody></table>' : '<div class="empty-state">Din mätdata visas här när du sparat din första mätning.</div>';
 		}
