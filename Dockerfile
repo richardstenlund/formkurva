@@ -9,8 +9,6 @@ RUN npm ci --omit=dev
 COPY server.js ./
 COPY MyHome.html ./
 COPY admin.html ./
-COPY loggning.html ./
-COPY loggning.js ./
 COPY reset-password.html ./
 COPY formkurva.css ./
 COPY chrome.js ./

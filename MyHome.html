@@ -169,7 +169,7 @@
 				<button class="nav-item" onclick="document.getElementById('new-measurement').scrollIntoView({behavior:'smooth'})"><span class="nav-icon">＋</span> Ny mätning</button>
 				<button class="nav-item" onclick="document.getElementById('history').scrollIntoView({behavior:'smooth'})"><span class="nav-icon">◷</span> Historik</button>
 				<button class="nav-item" onclick="document.getElementById('goals').scrollIntoView({behavior:'smooth'})"><span class="nav-icon">◎</span> Mål & hälsa</button>
-				<a class="nav-item" href="loggning.html"><span class="nav-icon">◌</span> Träning & kropp</a>
+				<button class="nav-item" onclick="document.getElementById('new-workout').scrollIntoView({behavior:'smooth'})"><span class="nav-icon">◌</span> Nytt träningspass</button>
 				<button class="nav-item" onclick="document.getElementById('profile').scrollIntoView({behavior:'smooth'})"><span class="nav-icon">◉</span> Min profil</button>
 				<a class="nav-item admin-only" id="admin-nav" href="admin.html"><span class="nav-icon">⚙</span> Admin</a>
 			</nav>
@@ -217,7 +217,11 @@
 
 			<section class="panel form-panel" id="new-measurement"><div class="panel-heading"><div><h2>Ny mätning</h2><p class="panel-subtitle">Fyll i det du vill följa idag.</p></div></div><form class="measurement-form" id="measurement-form"><label>Datum<input type="date" name="date" id="date-input" required></label><div class="field-grid"><label>Kroppsvikt<div class="unit-input"><input type="number" name="weight" step="0.1" min="0" placeholder="0.0"><span>kg</span></div></label><label>Midja<div class="unit-input"><input type="number" name="waist" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Bröst<div class="unit-input"><input type="number" name="chest" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Överarm<div class="unit-input"><input type="number" name="arm" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Lår<div class="unit-input"><input type="number" name="thigh" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Höft<div class="unit-input"><input type="number" name="hip" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label></div><button class="save-button" type="submit">Spara mätning <span>→</span></button></form></section>
 
+			<section class="panel form-panel" id="new-workout"><div class="panel-heading"><div><h2>Nytt träningspass</h2><p class="panel-subtitle">Logga övning, set, repetitioner och belastning.</p></div></div><form class="measurement-form" id="workout-form"><div class="field-grid"><label>Datum<input type="date" name="date" id="workout-date-input" required></label><label>Tid<input type="time" name="time" id="workout-time-input" required></label></div><label>Övning<input type="text" name="exercise" id="workout-exercise-input" maxlength="100" placeholder="t.ex. Knäböj" required></label><label>Muskelgrupp<select name="muscleGroup" id="workout-muscle-input" required><option value="">Välj muskelgrupp</option><option>Bröst</option><option>Rygg</option><option>Ben</option><option>Axlar</option><option>Armar</option><option>Rumpa</option><option>Mage</option><option>Helkropp</option><option>Annat</option></select></label><div class="field-grid"><label>Set<div class="unit-input"><input type="number" name="sets" min="1" max="100" step="1" value="3" required></div></label><label>Repetitioner<div class="unit-input"><input type="number" name="reps" min="1" max="1000" step="1" value="8" required></div></label></div><label>Vikt<div class="unit-input"><input type="number" name="weight" min="0" max="10000" step="0.5" value="0" required><span>kg</span></div></label><label>Anteckning<input type="text" name="notes" maxlength="500" placeholder="Känsla, teknik eller progression"></label><button class="save-button" type="submit">Spara träningspass <span>→</span></button></form></section>
+
 				<section class="panel history" id="history"><div class="panel-heading"><div><h2>Senaste mätningar</h2><p class="panel-subtitle">Din historik, samlad på ett ställe.</p></div><div><button class="export-button" id="export-button">↓ JSON</button><button class="export-button" id="export-csv">↓ CSV</button></div></div><div id="history-content"></div></section>
+
+				<section class="panel history" id="workout-history"><div class="panel-heading"><div><h2>Senaste träningspass</h2><p class="panel-subtitle">Dina loggade övningar, senaste först.</p></div></div><div id="workout-history-content"></div></section>
 
 					<section class="panel profile-panel" id="profile"><div class="panel-heading"><div><h2>Min profil</h2><p class="panel-subtitle">Ändra dina uppgifter och följ dina mål.</p></div></div><div class="profile-layout"><div class="profile-identity"><div class="profile-avatar-large" id="profile-avatar">?</div><div><h3 id="profile-name-preview">Gäst</h3><p id="profile-email-preview">Logga in för att redigera profilen.</p></div></div><form class="profile-form" id="profile-form"><div class="field-grid"><label>Visningsnamn<input type="text" name="name" id="profile-name" placeholder="Ditt namn"></label><label>E-post<input type="email" name="email" id="profile-email" readonly></label><label>Längd<div class="unit-input"><input type="number" name="height" id="profile-height" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Min målvikt<div class="unit-input"><input type="number" name="goalWeight" id="profile-goal" step="0.1" min="0" placeholder="0.0"><span>kg</span></div></label><label>Måttenhet<select name="unit" id="profile-unit"><option value="cm">Centimeter (cm)</option><option value="in">Tum (in)</option></select></label></div><div class="profile-actions"><button class="save-button" type="submit">Spara profil <span>→</span></button><span class="profile-status" id="profile-status"></span></div></form></div><form class="profile-form password-form" id="password-form"><h3>Säkerhet</h3><div class="field-grid"><label>Nuvarande lösenord<input type="password" name="currentPassword" minlength="8" required></label><label>Nytt lösenord<input type="password" name="newPassword" minlength="8" required></label></div><button class="account-button primary" type="submit">Byt lösenord</button></form></section>
 
@@ -251,10 +255,14 @@
 		let currentUser = '';
 		let currentRole = '';
 		const form = document.getElementById('measurement-form');
+		const workoutForm = document.getElementById('workout-form');
 		const today = new Date();
 		const dateToInput = date => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+		const localTime = () => [String(new Date().getHours()).padStart(2, '0'), String(new Date().getMinutes()).padStart(2, '0')].join(':');
 		document.getElementById('today').textContent = today.toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric' });
 		document.getElementById('date-input').value = dateToInput(today);
+		document.getElementById('workout-date-input').value = dateToInput(today);
+		document.getElementById('workout-time-input').value = localTime();
 		function storageKey() { return storagePrefix + (currentUser || 'guest'); }
 		let measurements = [];
 		let workouts = [];
@@ -640,6 +648,7 @@
 		function render() {
 			renderExerciseMedals();
 			renderProgressCharts();
+			renderWorkoutHistory();
 			const sorted = [...measurements].sort((a, b) => new Date(a.date) - new Date(b.date));
 			const metricSelector = document.getElementById('chart-metric');
 			const chartTitle = metricSelector?.selectedOptions?.[0]?.textContent || ({ weight: 'Vikt', waist: 'Midja', chest: 'Bröst', arm: 'Överarm', thigh: 'Lår', hip: 'Höft' }[currentMetric] || 'Vikt');
@@ -668,6 +677,34 @@
 		form.addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(true); return; } const data = Object.fromEntries(new FormData(form)); const wasEditing = Boolean(editingMeasurementId); try { if (wasEditing) { if (serverMode) { const saved = await api('/measurements/' + encodeURIComponent(editingMeasurementId), { method: 'PUT', body: JSON.stringify(data) }); measurements = measurements.map(item => item.id === editingMeasurementId ? saved : item); } else { const old = measurements.find(item => item.id === editingMeasurementId); Object.assign(old, data); localStorage.setItem(storageKey(), JSON.stringify(measurements)); } editingMeasurementId = ''; } else if (serverMode) { const saved = await api('/measurements', { method: 'POST', body: JSON.stringify(data) }); measurements.push(saved); } else { data.id = Date.now().toString(); measurements.push(data); localStorage.setItem(storageKey(), JSON.stringify(measurements)); } form.reset(); document.getElementById('date-input').value = dateToInput(new Date()); render(); showToast(wasEditing ? 'Mätningen är uppdaterad.' : 'Mätningen är sparad.'); } catch (error) { handleApiError(error); } });
 		function editMeasurement(id) { const item = measurements.find(entry => entry.id === id); if (!item) return; editingMeasurementId = id; Object.keys(item).forEach(key => { const field = form.elements.namedItem(key); if (field) field.value = item[key]; }); document.getElementById('new-measurement').scrollIntoView({ behavior: 'smooth' }); showToast('Redigeringsläge aktiverat.'); }
 		async function removeMeasurement(id) { try { if (serverMode) await api('/measurements/' + encodeURIComponent(id), { method: 'DELETE' }); measurements = measurements.filter(item => item.id !== id); if (!serverMode) localStorage.setItem(storageKey(), JSON.stringify(measurements)); render(); } catch (error) { handleApiError(error); } }
+		function renderWorkoutHistory() {
+			const container = document.getElementById('workout-history-content');
+			if (!container) return;
+			const sortedWorkouts = [...workouts].sort((a, b) => new Date(b.date + 'T' + (b.workout_time || '00:00:00')) - new Date(a.date + 'T' + (a.workout_time || '00:00:00')));
+			container.innerHTML = sortedWorkouts.length ? '<table class="history-table"><thead><tr><th>Datum</th><th>Övning</th><th>Muskelgrupp</th><th>Set × reps</th><th>Vikt</th><th></th></tr></thead><tbody>' + sortedWorkouts.map(item => '<tr><td>' + new Date(item.date + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' }) + (item.workout_time ? ' ' + item.workout_time.slice(0, 5) : '') + '</td><td>' + item.exercise + '</td><td>' + item.muscle_group + '</td><td>' + item.sets + ' × ' + item.reps + '</td><td>' + formatNumber(item.weight, 'kg') + '</td><td><button class="delete-button" aria-label="Ta bort träningspass" onclick="removeWorkout(\'' + item.id + '\')">×</button></td></tr>').join('') + '</tbody></table>' : '<div class="empty-state">Dina träningspass visas här när du loggat ditt första.</div>';
+		}
+		workoutForm.addEventListener('submit', async event => {
+			event.preventDefault();
+			if (!currentUser) { openAuth(true); return; }
+			const data = Object.fromEntries(new FormData(workoutForm));
+			try {
+				const saved = await api('/workouts', { method: 'POST', body: JSON.stringify(data) });
+				workouts.unshift(saved);
+				workoutForm.reset();
+				document.getElementById('workout-date-input').value = dateToInput(new Date());
+				document.getElementById('workout-time-input').value = localTime();
+				render();
+				showToast('Träningspasset är sparat.');
+			} catch (error) { handleApiError(error); }
+		});
+		async function removeWorkout(id) {
+			try {
+				if (serverMode) await api('/workouts/' + encodeURIComponent(id), { method: 'DELETE' });
+				workouts = workouts.filter(item => item.id !== id);
+				render();
+				showToast('Träningspasset är borttaget.');
+			} catch (error) { handleApiError(error); }
+		}
 		updateAccountUi();
 		renderProfile();
 		render();
