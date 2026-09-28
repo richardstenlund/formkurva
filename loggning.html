@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="sv">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="theme-color" content="#123e32">
+	<link rel="manifest" href="/manifest.webmanifest">
+	<link rel="stylesheet" href="/formkurva.css?v=2">
+	<title>Formkurva | Träning & kropp</title>
+	<style>
+		main { max-width: 1180px; }
+		.tracker-header { align-items: center; }
+		.tracker-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+		.tracker-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+		.tracker-panel { min-width: 0; }
+		.tracker-panel h2 { margin-bottom: 5px; }
+		.tracker-form { display: grid; gap: 14px; margin-top: 22px; }
+		.tracker-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+		.tracker-fields label, .tracker-form > label { min-width: 0; }
+		.unit-field { position: relative; }
+		.unit-field input { padding-right: 40px; }
+		.unit-field span { position: absolute; top: 12px; right: 12px; color: var(--muted); font-size: 12px; }
+		.tracker-list { display: grid; gap: 10px; margin-top: 18px; }
+		.tracker-entry { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; padding: 14px 0; border-top: 1px solid var(--line); }
+		.tracker-entry:first-child { border-top: 0; }
+		.entry-title { margin: 0 0 6px; font-size: 13px; font-weight: 700; }
+		.entry-details { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+		.entry-delete { flex: 0 0 auto; padding: 6px 9px; border: 1px solid var(--line); border-radius: 7px; background: transparent; color: var(--muted); font-size: 11px; }
+		.entry-delete:hover { border-color: #d8a58c; color: #aa542f; }
+		.tracker-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
+		.summary-card { padding: 17px; border: 1px solid var(--line); border-radius: 12px; background: var(--white); box-shadow: var(--shadow); }
+		.summary-card span { display: block; color: var(--muted); font-size: 11px; }
+		.summary-card strong { display: block; margin-top: 7px; font-family: 'Space Grotesk', sans-serif; font-size: 22px; }
+		.auth-panel { max-width: 470px; margin: 0 auto 22px; }
+		.auth-tabs { display: flex; gap: 8px; margin-top: 18px; }
+		.auth-tab { flex: 1; padding: 9px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); font-weight: 700; }
+		.auth-tab.active { border-color: var(--green); background: var(--green); color: white; }
+		.tracker-status { min-height: 18px; margin: 10px 0 0; color: var(--muted); font-size: 12px; }
+		.tracker-status.error { color: #aa542f; }
+		.tracker-status.ok { color: var(--green); }
+		.tracker-app[hidden], .auth-panel[hidden] { display: none; }
+		@media (max-width: 760px) {
+			main { padding: 22px 15px 42px; }
+			.tracker-header { align-items: flex-start; flex-direction: column; }
+			.tracker-grid { grid-template-columns: 1fr; }
+			.tracker-summary { gap: 8px; }
+			.summary-card { padding: 13px 10px; }
+			.summary-card strong { font-size: 18px; }
+		}
+		@media (max-width: 420px) {
+			.tracker-fields { grid-template-columns: 1fr; }
+			.tracker-summary { grid-template-columns: 1fr; }
+		}
+	</style>
+</head>
+<body>
+	<main>
+		<header class="topbar tracker-header">
+			<div>
+				<p class="eyebrow">Träning och hälsa</p>
+				<h1>Träning & kropp</h1>
+				<p class="page-sub">Samla dina kroppsmått och träningspass på ett ställe.</p>
+			</div>
+			<div class="tracker-actions">
+				<a class="account-button" href="/">← Översikt</a>
+				<a class="account-button" href="/gym.html">Gym & schema</a>
+				<span class="user-chip" id="user-chip"><span class="user-avatar" id="user-avatar"></span><span id="user-email"></span></span>
+				<button class="account-button" id="logout-button" type="button" hidden>Logga ut</button>
+			</div>
+		</header>
+
+		<section class="panel auth-panel" id="auth-panel">
+			<div class="panel-heading">
+				<div><h2 id="auth-title">Logga in eller skapa konto</h2><p class="panel-subtitle">Dina uppgifter sparas på ditt konto i databasen.</p></div>
+			</div>
+			<div class="auth-tabs" role="group" aria-label="Välj kontoåtgärd">
+				<button class="auth-tab active" type="button" data-auth-mode="login">Logga in</button>
+				<button class="auth-tab" type="button" data-auth-mode="register">Skapa konto</button>
+			</div>
+			<form class="tracker-form" id="auth-form">
+				<label>E-post<input type="email" name="email" autocomplete="email" required></label>
+				<label>Lösenord<input type="password" name="password" autocomplete="current-password" minlength="8" required></label>
+				<button class="save-button" id="auth-submit" type="submit">Logga in</button>
+			</form>
+			<p class="tracker-status" id="auth-status" role="status" aria-live="polite"></p>
+		</section>
+
+		<div class="tracker-app" id="tracker-app" hidden>
+			<section class="tracker-summary" aria-label="Senaste sammanfattning">
+				<div class="summary-card"><span>Senaste vikt</span><strong id="summary-weight">—</strong></div>
+				<div class="summary-card"><span>Längd i profilen</span><strong id="summary-height">—</strong></div>
+				<div class="summary-card"><span>Loggade träningspass</span><strong id="summary-workouts">0</strong></div>
+			</section>
+			<div class="tracker-grid">
+				<section class="panel tracker-panel">
+					<h2>Kroppsmätning</h2>
+					<p class="panel-subtitle">Välj datum och fyll i de mått du vill följa.</p>
+					<form class="tracker-form" id="measurement-form">
+						<label>Datum<input type="date" name="date" id="measurement-date" required></label>
+						<div class="tracker-fields">
+							<label>Kroppsvikt<div class="unit-field"><input type="number" name="weight" min="0" max="500" step="0.1" placeholder="0,0"><span>kg</span></div></label>
+							<label>Midja<div class="unit-field"><input type="number" name="waist" min="0" max="300" step="0.1" placeholder="0,0"><span>cm</span></div></label>
+							<label>Bröst<div class="unit-field"><input type="number" name="chest" min="0" max="300" step="0.1" placeholder="0,0"><span>cm</span></div></label>
+							<label>Överarm<div class="unit-field"><input type="number" name="arm" min="0" max="150" step="0.1" placeholder="0,0"><span>cm</span></div></label>
+							<label>Lår<div class="unit-field"><input type="number" name="thigh" min="0" max="200" step="0.1" placeholder="0,0"><span>cm</span></div></label>
+							<label>Höft<div class="unit-field"><input type="number" name="hip" min="0" max="300" step="0.1" placeholder="0,0"><span>cm</span></div></label>
+						</div>
+						<button class="save-button" type="submit">Spara kroppsmått →</button>
+					</form>
+					<p class="tracker-status" id="measurement-status" role="status" aria-live="polite"></p>
+					<div><h3>Senaste kroppsmätningar</h3><div class="tracker-list" id="measurement-list"></div></div>
+				</section>
+
+				<div>
+					<section class="panel tracker-panel">
+						<h2>Min profil</h2>
+						<p class="panel-subtitle">Längden sparas på ditt konto och används i din hälsoprofil.</p>
+						<form class="tracker-form" id="profile-form">
+							<label>Längd<div class="unit-field"><input type="number" name="height" id="profile-height" min="50" max="250" step="0.1" placeholder="t.ex. 175" required><span>cm</span></div></label>
+							<button class="save-button" type="submit">Spara längd →</button>
+						</form>
+						<p class="tracker-status" id="profile-status" role="status" aria-live="polite"></p>
+					</section>
+					<section class="panel tracker-panel" style="margin-top:20px">
+						<h2>Träningspass</h2>
+						<p class="panel-subtitle">Logga övning, set, repetitioner och belastning.</p>
+						<form class="tracker-form" id="workout-form">
+							<label>Datum<input type="date" name="date" id="workout-date" required></label>
+							<label>Övning<input type="text" name="exercise" maxlength="100" placeholder="t.ex. Knäböj" required></label>
+							<label>Muskelgrupp<select name="muscleGroup" required><option value="">Välj muskelgrupp</option><option>Bröst</option><option>Rygg</option><option>Ben</option><option>Axlar</option><option>Armar</option><option>Rumpa</option><option>Mage</option><option>Helkropp</option><option>Annat</option></select></label>
+							<div class="tracker-fields">
+								<label>Set<input type="number" name="sets" min="1" max="100" step="1" value="3" required></label>
+								<label>Repetitioner<input type="number" name="reps" min="1" max="1000" step="1" value="8" required></label>
+								<label>Vikt<input type="number" name="weight" min="0" max="10000" step="0.5" value="0" required></label>
+							</div>
+							<label>Anteckning<input type="text" name="notes" maxlength="500" placeholder="Känsla, teknik eller progression"></label>
+							<button class="save-button" type="submit">Spara träningspass →</button>
+						</form>
+						<p class="tracker-status" id="workout-status" role="status" aria-live="polite"></p>
+						<div><h3>Senaste träningspass</h3><div class="tracker-list" id="workout-list"></div></div>
+					</section>
+				</div>
+			</div>
+			<p class="tracker-status" id="page-status" role="status" aria-live="polite"></p>
+		</div>
+	</main>
+	<script src="/loggning.js" defer></script>
+</body>
+</html>

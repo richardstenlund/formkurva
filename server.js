@@ -357,6 +357,10 @@ app.put('/api/profile', requireUser, async (req, res, next) => {
   try {
     const profile = { ...req.body };
     delete profile.email;
+    if (profile.height !== undefined && profile.height !== '' && (!Number.isFinite(Number(profile.height)) || Number(profile.height) < 50 || Number(profile.height) > 250)) {
+      return res.status(400).json({ error: 'Ange en längd mellan 50 och 250 cm.' });
+    }
+    if (profile.height !== undefined && profile.height !== '') profile.height = Number(profile.height);
     await pool.query('UPDATE users SET profile_json = $1 WHERE id = $2', [JSON.stringify(profile), req.user.id]);
     res.json({ profile });
   } catch (error) { next(error); }

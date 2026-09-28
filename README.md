@@ -32,6 +32,8 @@ På profilsidan finns lösenordsbyte, profilbild, mål och måttenhet. Historike
 
 Glömt lösenord finns på inloggningen. Fyll i `SMTP_*` och `APP_URL` i `.env` för att skicka återställningslänken med e-post. Utan SMTP loggas länken i serverloggen och visas bara i utvecklingsläge.
 
+Den samlade loggningssidan finns på `/loggning.html`. Där kan användare logga kroppsvikt, midja, bröst, överarm, lår och höft, spara längd i sin profil och registrera träningspass. Uppgifterna sparas per konto i PostgreSQL.
+
 Gym-sidan finns på `/gym.html`. Där kan användare välja bland övningar för alla stora muskelgrupper, logga träningspass och bygga egna träningsdagar. Träningspassen och schemat sparas i PostgreSQL via API:et.
 
 Vid vanlig HTTP i hemnätet ska `SECURE_COOKIES` vara `false`. När du lägger sidan bakom HTTPS ändrar du den till `true` och kör om containern.
