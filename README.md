@@ -40,7 +40,7 @@ Vid vanlig HTTP i hemnätet ska `SECURE_COOKIES` vara `false`. När du lägger s
 
 Adminpanelen (`/admin.html`) har en länk **Öppna databasen** till Adminer på port `8081`. Adminer administrerar PostgreSQL via webbläsaren. Logga in med server `db`, driver `PostgreSQL`, användare `formkurva`, databas `formkurva` och lösenordet från `DB_PASSWORD` i `.env`. Exponera inte Adminer mot internet utan HTTPS och extra åtkomstskydd.
 
-Databasen sparas i Docker-volymen `formkurva_db` och överlever omstart eller uppdatering av containern. När sidan körs via servern sparas användarkonton, profiler, teman, mätningar och träningsdata i PostgreSQL på servern, inte i webbläsaren.
+Databasen sparas i en separat Docker-volym (`<compose-projektnamn>_postgres_data`) och överlever omstart eller uppdatering av containern. Den har ett eget volymnamn för att inte återanvända äldre MariaDB- eller PostgreSQL-data av misstag. När sidan körs via servern sparas användarkonton, profiler, teman, mätningar och träningsdata i PostgreSQL på servern, inte i webbläsaren.
 
 ## Uppdatera
 

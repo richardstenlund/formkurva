@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - formkurva_db:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
@@ -71,5 +71,5 @@ services:
     command: -c 'while true; do pg_dump -h db -U "$${DB_USER}" -d "$${DB_NAME}" | gzip > /backups/formkurva-$$(date +%Y-%m-%d-%H%M).sql.gz; find /backups -type f -mtime +14 -delete; sleep 86400; done'
 
 volumes:
-  formkurva_db:
+  postgres_data:
   formkurva_backups:
