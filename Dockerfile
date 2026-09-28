@@ -10,6 +10,9 @@ COPY server.js ./
 COPY MyHome.html ./
 COPY admin.html ./
 COPY gym.html ./
+COPY reset-password.html ./
+COPY formkurva.css ./
+COPY chrome.js ./
 COPY manifest.webmanifest ./
 COPY sw.js ./
 RUN mkdir -p /data

@@ -174,6 +174,12 @@ app.use((req, res, next) => {
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   next();
 });
+app.get('/formkurva.css', (req, res, next) => {
+  res.sendFile(path.join(__dirname, 'formkurva.css'), { headers: { 'Cache-Control': 'no-store' } }, error => {
+    if (error) next(error);
+  });
+});
+app.get('/fomkurva.css', (req, res) => res.redirect(301, '/formkurva.css'));
 app.use(express.static(path.join(__dirname), { index: 'MyHome.html' }));
 setInterval(() => pool.query('DELETE FROM sessions WHERE expires_at <= $1', [Date.now()]).catch(console.error), 60 * 60 * 1000).unref();
 

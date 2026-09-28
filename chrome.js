@@ -3,16 +3,16 @@
 	const sidebar = document.getElementById('app-sidebar');
 	if (sidebar) {
 		sidebar.innerHTML = `
-			<a class="brand" href="/"><span class="brand-mark">↗</span> Formkurva</a>
+			<a class="brand" href="MyHome.html"><span class="brand-mark">↗</span> Formkurva</a>
 			<p class="nav-label">Meny</p>
 			<nav>
-				<a class="nav-item${page === 'home' ? ' active' : ''}" href="/"><span class="nav-icon">▦</span> Översikt</a>
-				<a class="nav-item" href="/#new-measurement"><span class="nav-icon">＋</span> Ny mätning</a>
-				<a class="nav-item" href="/#history"><span class="nav-icon">◷</span> Historik</a>
-				<a class="nav-item" href="/#goals"><span class="nav-icon">◎</span> Mål & hälsa</a>
-				<a class="nav-item${page === 'gym' ? ' active' : ''}" href="/gym.html"><span class="nav-icon">▣</span> Gym & schema</a>
-				<a class="nav-item" href="/#profile"><span class="nav-icon">◉</span> Min profil</a>
-				<a class="nav-item admin-only" id="admin-nav" href="/admin.html"><span class="nav-icon">⚙</span> Admin</a>
+				<a class="nav-item${page === 'home' ? ' active' : ''}" href="MyHome.html"><span class="nav-icon">▦</span> Översikt</a>
+				<a class="nav-item" href="MyHome.html#new-measurement"><span class="nav-icon">＋</span> Ny mätning</a>
+				<a class="nav-item" href="MyHome.html#history"><span class="nav-icon">◷</span> Historik</a>
+				<a class="nav-item" href="MyHome.html#goals"><span class="nav-icon">◎</span> Mål & hälsa</a>
+				<a class="nav-item${page === 'gym' ? ' active' : ''}" href="gym.html"><span class="nav-icon">▣</span> Gym & schema</a>
+				<a class="nav-item" href="MyHome.html#profile"><span class="nav-icon">◉</span> Min profil</a>
+				<a class="nav-item admin-only" id="admin-nav" href="admin.html"><span class="nav-icon">⚙</span> Admin</a>
 			</nav>
 			<div class="sidebar-bottom">Inloggad data sparas på servern.<br>En mätning i taget. En vana i taget.</div>
 		`;
