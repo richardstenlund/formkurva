@@ -38,6 +38,13 @@
 		.form-panel .panel-heading { margin-bottom: 18px; }
 		.measurement-form { display: grid; gap: 12px; }
 		.field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+		.field-grid-3 { grid-template-columns: repeat(3, 1fr); }
+		.workout-advanced { border: 1px dashed #d3dfd4; border-radius: 8px; padding: 2px 12px 12px; }
+		.workout-advanced summary { padding: 10px 0; color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer; list-style: none; }
+		.workout-advanced summary::-webkit-details-marker { display: none; }
+		.workout-advanced summary::before { content: '▸ '; }
+		.workout-advanced[open] summary::before { content: '▾ '; }
+		.workout-advanced > .field-grid, .workout-advanced > label { margin-top: 10px; }
 		label { display: grid; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 600; }
 		input { width: 100%; padding: 11px 12px; border: 1px solid #d3dfd4; border-radius: 7px; outline: 0; background: white; color: var(--ink); font-size: 14px; }
 		input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(28,91,72,.12); }
@@ -129,6 +136,14 @@
 		.exercise-medal-details small { margin-top: 3px; color: var(--muted); font-size: 11px; }
 		.exercise-medal-level { color: var(--green); font-size: 10px; font-weight: 700; white-space: nowrap; }
 		.medal-guide { margin: 0 0 12px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+		.badge-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+		.badge-actions .export-button { font-size: 10px; padding: 7px 10px; }
+		.medal-catalog { margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: #f8fbf8; font-size: 11px; color: var(--muted); line-height: 1.6; }
+		.medal-catalog[hidden] { display: none; }
+		.medal-catalog h3 { margin: 0 0 6px; color: var(--ink); font-size: 12px; }
+		.medal-catalog h3:not(:first-child) { margin-top: 12px; }
+		.medal-catalog ul { margin: 0; padding-left: 18px; }
+		#show-more-medals { margin-top: 10px; width: 100%; }
 		.motivation-message { margin: 10px 0 0; color: var(--green); font-size: 12px; font-weight: 600; line-height: 1.5; }
 		.progress-panel { grid-column: 1 / -1; }
 		.progress-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
@@ -192,9 +207,19 @@
 
 			<section class="dashboard-insights" id="dashboard-insights">
 				<article class="panel insight-card">
-					<div class="panel-heading"><div><h2>Motivation & badges</h2><p class="panel-subtitle">Samla medaljer för dina träningsframsteg.</p></div></div>
-					<p class="medal-guide">Övningsmedaljer: brons efter 1 pass, silver efter 5 och guld efter 10. Samla också träningsdagar och morgon-, dag- och kvällsmedaljer.</p>
+					<div class="panel-heading"><div><h2>Motivation & badges</h2><p class="panel-subtitle">Samla medaljer för dina träningsframsteg.</p></div><div class="badge-actions"><button class="export-button" id="toggle-medal-catalog" type="button">Vilka medaljer kan jag få?</button><button class="export-button" id="clear-badge-list" type="button">Rensa listan</button></div></div>
+					<div class="medal-catalog" id="medal-catalog" hidden>
+						<h3>Aktivitetsmedaljer</h3>
+						<ul>
+							<li><strong>Träningspass totalt</strong> – brons vid 10, silver vid 50, guld vid 100 loggade övningar.</li>
+							<li><strong>Aktiva träningsdagar</strong> – brons vid 3, silver vid 10, guld vid 25 unika träningsdagar.</li>
+							<li><strong>Morgontränare</strong> (kl. 05–09), <strong>Dagsform</strong> (kl. 09–17), <strong>Kvällskämpe</strong> (kl. 17–23) – brons vid 1, silver vid 5, guld vid 20 dagar i respektive tidsspann.</li>
+						</ul>
+						<h3>Övningsmedaljer</h3>
+						<ul><li>En medalj per övning – brons efter 1 pass, silver efter 5 och guld efter 10 loggade pass i just den övningen.</li></ul>
+					</div>
 					<div class="badge-list exercise-medals" id="badge-list" aria-live="polite"></div>
+					<button class="export-button" id="show-more-medals" type="button" hidden>Visa fler medaljer</button>
 					<p class="motivation-message" id="motivation-message"></p>
 				</article>
 				<article class="panel insight-card">
@@ -217,7 +242,7 @@
 
 			<section class="panel form-panel" id="new-measurement"><div class="panel-heading"><div><h2>Ny mätning</h2><p class="panel-subtitle">Fyll i det du vill följa idag.</p></div></div><form class="measurement-form" id="measurement-form"><label>Datum<input type="date" name="date" id="date-input" required></label><div class="field-grid"><label>Kroppsvikt<div class="unit-input"><input type="number" name="weight" step="0.1" min="0" placeholder="0.0"><span>kg</span></div></label><label>Midja<div class="unit-input"><input type="number" name="waist" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Bröst<div class="unit-input"><input type="number" name="chest" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Överarm<div class="unit-input"><input type="number" name="arm" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Lår<div class="unit-input"><input type="number" name="thigh" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Höft<div class="unit-input"><input type="number" name="hip" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label></div><button class="save-button" type="submit">Spara mätning <span>→</span></button></form></section>
 
-			<section class="panel form-panel" id="new-workout"><div class="panel-heading"><div><h2>Nytt träningspass</h2><p class="panel-subtitle">Logga övning, set, repetitioner och belastning.</p></div></div><form class="measurement-form" id="workout-form"><div class="field-grid"><label>Datum<input type="date" name="date" id="workout-date-input" required></label><label>Tid<input type="time" name="time" id="workout-time-input" required></label></div><label>Övning<input type="text" name="exercise" id="workout-exercise-input" maxlength="100" placeholder="t.ex. Knäböj" required></label><label>Muskelgrupp<select name="muscleGroup" id="workout-muscle-input" required><option value="">Välj muskelgrupp</option><option>Bröst</option><option>Rygg</option><option>Ben</option><option>Axlar</option><option>Armar</option><option>Rumpa</option><option>Mage</option><option>Helkropp</option><option>Annat</option></select></label><div class="field-grid"><label>Set<div class="unit-input"><input type="number" name="sets" min="1" max="100" step="1" value="3" required></div></label><label>Repetitioner<div class="unit-input"><input type="number" name="reps" min="1" max="1000" step="1" value="8" required></div></label></div><label>Vikt<div class="unit-input"><input type="number" name="weight" min="0" max="10000" step="0.5" value="0" required><span>kg</span></div></label><label>Anteckning<input type="text" name="notes" maxlength="500" placeholder="Känsla, teknik eller progression"></label><button class="save-button" type="submit">Spara träningspass <span>→</span></button></form></section>
+			<section class="panel form-panel" id="new-workout"><div class="panel-heading"><div><h2>Nytt träningspass</h2><p class="panel-subtitle">Logga övning, set, repetitioner och belastning.</p></div></div><form class="measurement-form" id="workout-form"><label>Övning<input type="text" name="exercise" id="workout-exercise-input" maxlength="100" placeholder="t.ex. Knäböj" required></label><div class="field-grid field-grid-3"><label>Set<div class="unit-input"><input type="number" name="sets" min="1" max="100" step="1" value="3" required></div></label><label>Repetitioner<div class="unit-input"><input type="number" name="reps" min="1" max="1000" step="1" value="8" required></div></label><label>Vikt<div class="unit-input"><input type="number" name="weight" min="0" max="10000" step="0.5" value="0" required><span>kg</span></div></label></div><details class="workout-advanced" id="workout-advanced"><summary>Fler alternativ (datum, tid, muskelgrupp, anteckning)</summary><div class="field-grid"><label>Datum<input type="date" name="date" id="workout-date-input" required></label><label>Tid<input type="time" name="time" id="workout-time-input" required></label></div><label>Muskelgrupp<select name="muscleGroup" id="workout-muscle-input"><option value="Annat">Välj muskelgrupp (valfritt)</option><option>Bröst</option><option>Rygg</option><option>Ben</option><option>Axlar</option><option>Armar</option><option>Rumpa</option><option>Mage</option><option>Helkropp</option><option>Annat</option></select></label><label>Anteckning<input type="text" name="notes" maxlength="500" placeholder="Känsla, teknik eller progression"></label></details><button class="save-button" type="submit">Spara träningspass <span>→</span></button></form></section>
 
 				<section class="panel history" id="history"><div class="panel-heading"><div><h2>Senaste mätningar</h2><p class="panel-subtitle">Din historik, samlad på ett ställe.</p></div><div><button class="export-button" id="export-button">↓ JSON</button><button class="export-button" id="export-csv">↓ CSV</button></div></div><div id="history-content"></div></section>
 
@@ -351,8 +376,10 @@
 			entry.append(icon, details, level);
 			return entry;
 		}
+		let showAllExerciseMedals = false;
 		function renderExerciseMedals() {
 			const list = document.getElementById('badge-list');
+			const showMoreButton = document.getElementById('show-more-medals');
 			const counts = new Map();
 			workouts.forEach(workout => {
 				const exercise = String(workout.exercise || '').trim();
@@ -365,11 +392,15 @@
 			if (!currentUser) {
 				list.innerHTML = '<div class="empty-state">Logga in för att samla medaljer i dina övningar.</div>';
 				document.getElementById('motivation-message').textContent = 'Varje träningspass räknas. Börja lugnt och bygg vidare i din egen takt.';
+				showMoreButton.hidden = true;
 				return;
 			}
-			const exerciseMedals = [...counts.values()]
-				.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'sv'))
-				.map(item => medalCard(item.name, 'pass i övningen', item.count, [1, 5, 10]));
+			const exerciseMedalLimit = 4;
+			const sortedExercises = [...counts.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'sv'));
+			const visibleExercises = showAllExerciseMedals ? sortedExercises : sortedExercises.slice(0, exerciseMedalLimit);
+			const exerciseMedals = visibleExercises.map(item => medalCard(item.name, 'pass i övningen', item.count, [1, 5, 10]));
+			showMoreButton.hidden = sortedExercises.length <= exerciseMedalLimit;
+			showMoreButton.textContent = showAllExerciseMedals ? 'Visa färre medaljer' : `Visa fler medaljer (${sortedExercises.length - exerciseMedalLimit} till)`;
 			const distinctDates = new Set(workouts.map(item => item.date).filter(Boolean));
 			const timeDates = { morgon: new Set(), dag: new Set(), kväll: new Set() };
 			workouts.forEach(item => {
@@ -634,6 +665,14 @@
 		document.getElementById('delete-data').addEventListener('click', async () => { if (!currentUser) { openAuth(); return; } if (!confirm('Vill du radera alla dina mätningar och profiluppgifter?')) return; try { if (serverMode) await api('/account', { method: 'DELETE' }); else { localStorage.removeItem(storageKey()); localStorage.removeItem(profileKey()); } currentUser = ''; currentProfile = {}; sessionUserId = ''; currentRole = ''; measurements = []; workouts = []; updateAccountUi(); applyTheme(); renderProfile(); render(); renderGoal(); renderHealth(); showToast('Din data är raderad.'); } catch (error) { handleApiError(error); } });
 		document.getElementById('chart-metric')?.addEventListener('change', event => { currentMetric = event.target.value; render(); });
 		document.getElementById('body-progress-metric').addEventListener('change', renderProgressCharts);
+		document.getElementById('toggle-medal-catalog').addEventListener('click', () => {
+			const catalog = document.getElementById('medal-catalog');
+			const button = document.getElementById('toggle-medal-catalog');
+			catalog.hidden = !catalog.hidden;
+			button.textContent = catalog.hidden ? 'Vilka medaljer kan jag få?' : 'Dölj medaljtyper';
+		});
+		document.getElementById('clear-badge-list').addEventListener('click', () => { showAllExerciseMedals = false; renderExerciseMedals(); showToast('Listan är återställd.'); });
+		document.getElementById('show-more-medals').addEventListener('click', () => { showAllExerciseMedals = !showAllExerciseMedals; renderExerciseMedals(); });
 		document.querySelectorAll('.period').forEach(button => button.addEventListener('click', () => { activePeriodMonths = Number(button.dataset.months); document.querySelectorAll('.period').forEach(item => item.classList.remove('active')); button.classList.add('active'); render(); }));
 		document.getElementById('export-button').addEventListener('click', () => { if (!currentUser) { openAuth(); return; } if (!measurements.length) { showToast('Spara en mätning först.'); return; } const blob = new Blob([JSON.stringify({ account: currentUser, measurements }, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'formkurva-resultat.json'; link.click(); URL.revokeObjectURL(link.href); showToast('Resultaten laddades ner.'); });
 		document.getElementById('password-form').addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(); return; } try { await api('/auth/change-password', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(event.target))) }); event.target.reset(); showToast('Lösenordet är ändrat.'); } catch (error) { handleApiError(error); } });

@@ -313,13 +313,13 @@ app.get('/api/workouts', requireUser, async (req, res, next) => {
 app.post('/api/workouts', requireUser, async (req, res, next) => {
   try {
     const data = req.body || {};
-    if (!data.date || !data.exercise || !data.muscleGroup || Number(data.sets) < 1 || Number(data.reps) < 1 || Number(data.weight) < 0 || (data.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(data.time))) return res.status(400).json({ error: 'Fyll i giltigt datum, tid, övning, set, reps och vikt.' });
+    if (!data.date || !data.exercise || Number(data.sets) < 1 || Number(data.reps) < 1 || Number(data.weight) < 0 || (data.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(data.time))) return res.status(400).json({ error: 'Fyll i giltigt datum, tid, övning, set, reps och vikt.' });
     const workout = {
       id: crypto.randomUUID(),
       date: String(data.date),
       workout_time: data.time ? `${data.time}:00` : null,
       exercise: String(data.exercise).slice(0, 100),
-      muscle_group: String(data.muscleGroup).slice(0, 50),
+      muscle_group: String(data.muscleGroup || 'Annat').slice(0, 50),
       sets: Number(data.sets),
       reps: Number(data.reps),
       weight: Number(data.weight),
