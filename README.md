@@ -34,7 +34,7 @@ Glömt lösenord finns på inloggningen. Fyll i `SMTP_*` och `APP_URL` i `.env` 
 
 Den samlade loggningssidan finns på `/loggning.html`. Där kan användare logga kroppsvikt, midja, bröst, överarm, lår och höft, spara längd i sin profil och registrera träningspass. Uppgifterna sparas per konto i PostgreSQL.
 
-Gym-sidan finns på `/gym.html`. Där kan användare välja bland övningar för alla stora muskelgrupper, logga träningspass och bygga egna träningsdagar. Träningspassen och schemat sparas i PostgreSQL via API:et.
+Gym-sidan finns på `/gym.html`. Där kan användare välja bland övningar för alla stora muskelgrupper, logga träningspass och bygga egna träningsdagar. Träningspassen och schemat sparas i PostgreSQL via API:et. På översiktssidan ger varje övning brons efter 1 loggat pass, silver efter 5 och guld efter 10.
 
 Vid vanlig HTTP i hemnätet ska `SECURE_COOKIES` vara `false`. När du lägger sidan bakom HTTPS ändrar du den till `true` och kör om containern.
 

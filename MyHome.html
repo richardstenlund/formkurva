@@ -120,6 +120,15 @@
 		.badge-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: var(--mint); font-size: 19px; }
 		.badge-item strong { display: block; font-size: 12px; }
 		.badge-item small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+		.exercise-medals { display: grid; gap: 9px; }
+		.exercise-medal { display: flex; align-items: center; gap: 11px; padding: 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--white); }
+		.exercise-medal-icon { display: grid; place-items: center; flex: 0 0 36px; width: 36px; height: 36px; border-radius: 50%; background: var(--paper); font-size: 21px; }
+		.exercise-medal-details { min-width: 0; flex: 1; }
+		.exercise-medal-details strong, .exercise-medal-details small { display: block; }
+		.exercise-medal-details strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+		.exercise-medal-details small { margin-top: 3px; color: var(--muted); font-size: 11px; }
+		.exercise-medal-level { color: var(--green); font-size: 10px; font-weight: 700; white-space: nowrap; }
+		.medal-guide { margin: 0 0 12px; color: var(--muted); font-size: 11px; line-height: 1.5; }
 		.pr-list li, .plan-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #edf0ec; }
 		.pr-list li:last-child, .plan-list li:last-child { border-bottom: 0; }
 		.pr-list strong, .plan-list strong { display: block; font-size: 12px; }
@@ -167,8 +176,9 @@
 
 			<section class="dashboard-insights" id="dashboard-insights">
 				<article class="panel insight-card">
-					<div class="panel-heading"><div><h2>Motivation & badges</h2><p class="panel-subtitle">Dina små vinster som samlas över tid.</p></div></div>
-					<div class="badge-list" id="badge-list"></div>
+					<div class="panel-heading"><div><h2>Motivation & badges</h2><p class="panel-subtitle">Samla medaljer för dina träningsframsteg.</p></div></div>
+					<p class="medal-guide">Tjäna brons efter 1 pass, silver efter 5 och guld efter 10 pass i samma övning.</p>
+					<div class="badge-list exercise-medals" id="badge-list" aria-live="polite"></div>
 				</article>
 				<article class="panel insight-card">
 					<div class="panel-heading"><div><h2>PR & övningar</h2><p class="panel-subtitle">Vilken övning lyfter du högst just nu?</p></div></div>
@@ -221,6 +231,7 @@
 		document.getElementById('date-input').value = dateToInput(today);
 		function storageKey() { return storagePrefix + (currentUser || 'guest'); }
 		let measurements = [];
+		let workouts = [];
 		const profileForm = document.getElementById('profile-form');
 		function profileKey() { return 'formkurva-profile-' + (currentUser || 'guest'); }
 		function renderProfile() {
@@ -244,7 +255,7 @@
 			document.getElementById('photo-preview').style.display = profile.photo ? 'block' : 'none';
 		}
 		function getProfile() { return serverMode ? currentProfile : JSON.parse(localStorage.getItem(profileKey()) || '{}'); }
-		async function loadServerState() { if (!serverMode) return; try { const session = await api('/me'); currentUser = session.user?.email || ''; sessionUserId = session.user?.id || ''; currentRole = session.user?.role || ''; currentProfile = session.user?.profile || {}; measurements = session.user ? (await api('/measurements')).measurements : []; updateAccountUi(); applyTheme(); renderProfile(); render(); if (currentRole === 'admin') loadAdminUsers(); } catch (error) { handleApiError(error); } }
+		async function loadServerState() { if (!serverMode) return; try { const session = await api('/me'); currentUser = session.user?.email || ''; sessionUserId = session.user?.id || ''; currentRole = session.user?.role || ''; currentProfile = session.user?.profile || {}; if (session.user) { const [measurementResult, workoutResult] = await Promise.all([api('/measurements'), api('/workouts')]); measurements = measurementResult.measurements; workouts = workoutResult.workouts; } else { measurements = []; workouts = []; } updateAccountUi(); applyTheme(); renderProfile(); render(); if (currentRole === 'admin') loadAdminUsers(); } catch (error) { handleApiError(error); } }
 		async function loadAdminUsers() { if (!serverMode || currentRole !== 'admin') return; try { const result = await api('/admin/users'); document.getElementById('admin-users').innerHTML = '<table class="admin-table"><thead><tr><th>E-post</th><th>Skapad</th><th>Roll</th></tr></thead><tbody>' + result.users.map(user => '<tr><td>' + user.email + (user.id === Number(sessionUserId) ? ' (du)' : '') + '</td><td>' + new Date(user.created_at).toLocaleDateString('sv-SE') + '</td><td><select class="role-select" data-user-id="' + user.id + '" data-original-role="' + user.role + '"' + (user.id === Number(sessionUserId) ? ' disabled' : '') + '><option value="user"' + (user.role === 'user' ? ' selected' : '') + '>Vanlig användare</option><option value="admin"' + (user.role === 'admin' ? ' selected' : '') + '>Administratör</option></select></td></tr>').join('') + '</tbody></table>'; document.querySelectorAll('.role-select').forEach(select => select.addEventListener('change', changeUserRole)); } catch (error) { document.getElementById('admin-users').innerHTML = '<div class="empty-state">' + error.message + '</div>'; } }
 		let sessionUserId = '';
 		async function changeUserRole(event) { const select = event.target; try { await api('/admin/users/' + select.dataset.userId + '/role', { method: 'PATCH', body: JSON.stringify({ role: select.value }) }); showToast('Användarrollen är uppdaterad.'); } catch (error) { select.value = select.dataset.originalRole; handleApiError(error); } }
@@ -276,6 +287,48 @@
 			}
 			const lastDate = [...measurements].sort((a, b) => new Date(b.date) - new Date(a.date))[0]?.date;
 			streakChange.textContent = lastDate ? 'Senaste mätning: ' + new Date(lastDate + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }) : 'Aktiv idag';
+		}
+		function renderExerciseMedals() {
+			const list = document.getElementById('badge-list');
+			const counts = new Map();
+			workouts.forEach(workout => {
+				const exercise = String(workout.exercise || '').trim();
+				if (!exercise) return;
+				const key = exercise.toLocaleLowerCase('sv-SE');
+				const current = counts.get(key) || { name: exercise, count: 0 };
+				current.count += 1;
+				counts.set(key, current);
+			});
+			const medals = [...counts.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'sv'));
+			if (!currentUser) {
+				list.innerHTML = '<div class="empty-state">Logga in för att samla medaljer i dina övningar.</div>';
+				return;
+			}
+			if (!medals.length) {
+				list.innerHTML = '<div class="empty-state">Logga ditt första träningspass för att börja samla medaljer.</div>';
+				return;
+			}
+			list.replaceChildren(...medals.map(item => {
+				const tier = item.count >= 10 ? { name: 'Guld', icon: '🥇', next: null } : item.count >= 5 ? { name: 'Silver', icon: '🥈', next: 10 } : item.count >= 1 ? { name: 'Brons', icon: '🥉', next: 5 } : null;
+				const entry = document.createElement('div');
+				entry.className = 'exercise-medal';
+				const icon = document.createElement('span');
+				icon.className = 'exercise-medal-icon';
+				icon.setAttribute('aria-hidden', 'true');
+				icon.textContent = tier.icon;
+				const details = document.createElement('span');
+				details.className = 'exercise-medal-details';
+				const title = document.createElement('strong');
+				title.textContent = item.name;
+				const progress = document.createElement('small');
+				progress.textContent = tier.next ? `${item.count} av ${tier.next} pass till nästa medalj` : `${item.count} pass loggade`;
+				const level = document.createElement('span');
+				level.className = 'exercise-medal-level';
+				level.textContent = tier.name;
+				details.append(title, progress);
+				entry.append(icon, details, level);
+				return entry;
+			}));
 		}
 		function renderHealth() {
 			const profile = getProfile(); const latest = [...measurements].sort((a, b) => new Date(a.date) - new Date(b.date)).at(-1); const height = Number(profile.height) / 100; const weight = Number(latest?.weight); const waist = Number(latest?.waist); const summary = document.getElementById('health-summary');
@@ -347,8 +400,8 @@
 		document.getElementById('auth-switch').addEventListener('click', () => { isRegistering = !isRegistering; showAuthForm('login'); });
 		forgotPasswordLink.addEventListener('click', () => showAuthForm('reset'));
 		resetBack.addEventListener('click', () => showAuthForm('login'));
-		document.getElementById('logout-button').addEventListener('click', async () => { if (serverMode) { await api('/auth/logout', { method: 'POST' }).catch(handleApiError); } currentUser = ''; sessionUserId = ''; currentRole = ''; currentProfile = {}; measurements = serverMode ? [] : JSON.parse(localStorage.getItem(storageKey()) || '[]'); updateAccountUi(); applyTheme(); renderProfile(); render(); showToast('Du är utloggad.'); });
-		authForm.addEventListener('submit', async event => { event.preventDefault(); const data = Object.fromEntries(new FormData(authForm)); const error = document.getElementById('auth-error'); if (serverMode) { try { const result = await api(isRegistering ? '/auth/register' : '/auth/login', { method: 'POST', body: JSON.stringify(data) }); currentUser = result.user.email; sessionUserId = result.user.id; currentRole = result.user.role || 'user'; currentProfile = result.user.profile || {}; measurements = (await api('/measurements')).measurements; updateAccountUi(); applyTheme(); renderProfile(); render(); if (currentRole === 'admin') loadAdminUsers(); authModal.classList.remove('open'); showToast(isRegistering ? 'Kontot är skapat.' : 'Du är inloggad.'); } catch (requestError) { error.textContent = requestError.message; } return; } const accounts = JSON.parse(localStorage.getItem(accountsKey) || '{}'); if (isRegistering && accounts[data.email]) { error.textContent = 'Det finns redan ett konto med den e-posten.'; return; } if (!isRegistering && (!accounts[data.email] || accounts[data.email] !== data.password)) { error.textContent = 'E-posten eller lösenordet stämmer inte.'; return; } if (isRegistering) accounts[data.email] = data.password; localStorage.setItem(accountsKey, JSON.stringify(accounts)); currentUser = data.email; localStorage.setItem('formkurva-current-user', currentUser); measurements = JSON.parse(localStorage.getItem(storageKey()) || '[]'); updateAccountUi(); renderProfile(); render(); authModal.classList.remove('open'); showToast(isRegistering ? 'Kontot är skapat.' : 'Du är inloggad.'); });
+		document.getElementById('logout-button').addEventListener('click', async () => { if (serverMode) { await api('/auth/logout', { method: 'POST' }).catch(handleApiError); } currentUser = ''; sessionUserId = ''; currentRole = ''; currentProfile = {}; measurements = serverMode ? [] : JSON.parse(localStorage.getItem(storageKey()) || '[]'); workouts = []; updateAccountUi(); applyTheme(); renderProfile(); render(); showToast('Du är utloggad.'); });
+		authForm.addEventListener('submit', async event => { event.preventDefault(); const data = Object.fromEntries(new FormData(authForm)); const error = document.getElementById('auth-error'); if (serverMode) { try { const result = await api(isRegistering ? '/auth/register' : '/auth/login', { method: 'POST', body: JSON.stringify(data) }); currentUser = result.user.email; sessionUserId = result.user.id; currentRole = result.user.role || 'user'; currentProfile = result.user.profile || {}; const [measurementResult, workoutResult] = await Promise.all([api('/measurements'), api('/workouts')]); measurements = measurementResult.measurements; workouts = workoutResult.workouts; updateAccountUi(); applyTheme(); renderProfile(); render(); if (currentRole === 'admin') loadAdminUsers(); authModal.classList.remove('open'); showToast(isRegistering ? 'Kontot är skapat.' : 'Du är inloggad.'); } catch (requestError) { error.textContent = requestError.message; } return; } const accounts = JSON.parse(localStorage.getItem(accountsKey) || '{}'); if (isRegistering && accounts[data.email]) { error.textContent = 'Det finns redan ett konto med den e-posten.'; return; } if (!isRegistering && (!accounts[data.email] || accounts[data.email] !== data.password)) { error.textContent = 'E-posten eller lösenordet stämmer inte.'; return; } if (isRegistering) accounts[data.email] = data.password; localStorage.setItem(accountsKey, JSON.stringify(accounts)); currentUser = data.email; localStorage.setItem('formkurva-current-user', currentUser); measurements = JSON.parse(localStorage.getItem(storageKey()) || '[]'); updateAccountUi(); renderProfile(); render(); authModal.classList.remove('open'); showToast(isRegistering ? 'Kontot är skapat.' : 'Du är inloggad.'); });
 		resetForm.addEventListener('submit', async event => {
 			event.preventDefault();
 			const formData = Object.fromEntries(new FormData(resetForm));
@@ -372,7 +425,7 @@
 		document.getElementById('note-form').addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(true); return; } const profile = getProfile(); profile.note = document.getElementById('daily-note').value; try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); currentProfile = result.profile; } else localStorage.setItem(profileKey(), JSON.stringify(profile)); showToast('Anteckningen är sparad.'); } catch (error) { handleApiError(error); } });
 		document.getElementById('progress-photo').addEventListener('change', event => { const file = event.target.files[0]; if (!file || !currentUser) return; const reader = new FileReader(); reader.onload = async () => { const profile = getProfile(); profile.photo = reader.result; try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); currentProfile = result.profile; } else localStorage.setItem(profileKey(), JSON.stringify(profile)); renderProfile(); showToast('Progressbilden är sparad.'); } catch (error) { handleApiError(error); } }; reader.readAsDataURL(file); });
 		document.getElementById('export-all').addEventListener('click', () => { if (!currentUser) { openAuth(); return; } const payload = { profile: getProfile(), measurements }; const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'formkurva-all-data.json'; link.click(); URL.revokeObjectURL(link.href); showToast('All data laddades ner.'); });
-		document.getElementById('delete-data').addEventListener('click', async () => { if (!currentUser) { openAuth(); return; } if (!confirm('Vill du radera alla dina mätningar och profiluppgifter?')) return; try { if (serverMode) await api('/account', { method: 'DELETE' }); else { localStorage.removeItem(storageKey()); localStorage.removeItem(profileKey()); } currentUser = ''; currentProfile = {}; sessionUserId = ''; currentRole = ''; measurements = []; updateAccountUi(); applyTheme(); renderProfile(); render(); renderGoal(); renderHealth(); showToast('Din data är raderad.'); } catch (error) { handleApiError(error); } });
+		document.getElementById('delete-data').addEventListener('click', async () => { if (!currentUser) { openAuth(); return; } if (!confirm('Vill du radera alla dina mätningar och profiluppgifter?')) return; try { if (serverMode) await api('/account', { method: 'DELETE' }); else { localStorage.removeItem(storageKey()); localStorage.removeItem(profileKey()); } currentUser = ''; currentProfile = {}; sessionUserId = ''; currentRole = ''; measurements = []; workouts = []; updateAccountUi(); applyTheme(); renderProfile(); render(); renderGoal(); renderHealth(); showToast('Din data är raderad.'); } catch (error) { handleApiError(error); } });
 		document.getElementById('chart-metric')?.addEventListener('change', event => { currentMetric = event.target.value; render(); });
 		document.querySelectorAll('.period').forEach(button => button.addEventListener('click', () => { activePeriodMonths = Number(button.dataset.months); document.querySelectorAll('.period').forEach(item => item.classList.remove('active')); button.classList.add('active'); render(); }));
 		document.getElementById('export-button').addEventListener('click', () => { if (!currentUser) { openAuth(); return; } if (!measurements.length) { showToast('Spara en mätning först.'); return; } const blob = new Blob([JSON.stringify({ account: currentUser, measurements }, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'formkurva-resultat.json'; link.click(); URL.revokeObjectURL(link.href); showToast('Resultaten laddades ner.'); });
@@ -386,6 +439,7 @@
 			return (change > 0 ? '+' : '') + change.toLocaleString('sv-SE', { maximumFractionDigits: 1 }) + ' ' + unit + ' sedan sist';
 		}
 		function render() {
+			renderExerciseMedals();
 			const sorted = [...measurements].sort((a, b) => new Date(a.date) - new Date(b.date));
 			const metricSelector = document.getElementById('chart-metric');
 			const chartTitle = metricSelector?.selectedOptions?.[0]?.textContent || ({ weight: 'Vikt', waist: 'Midja', chest: 'Bröst', arm: 'Överarm', thigh: 'Lår', hip: 'Höft' }[currentMetric] || 'Vikt');
