@@ -10,7 +10,6 @@
 				<a class="nav-item" href="MyHome.html#new-measurement"><span class="nav-icon">＋</span> Ny mätning</a>
 				<a class="nav-item" href="MyHome.html#history"><span class="nav-icon">◷</span> Historik</a>
 				<a class="nav-item" href="MyHome.html#goals"><span class="nav-icon">◎</span> Mål & hälsa</a>
-				<a class="nav-item${page === 'gym' ? ' active' : ''}" href="gym.html"><span class="nav-icon">▣</span> Gym & schema</a>
 				<a class="nav-item" href="MyHome.html#profile"><span class="nav-icon">◉</span> Min profil</a>
 				<a class="nav-item admin-only" id="admin-nav" href="admin.html"><span class="nav-icon">⚙</span> Admin</a>
 			</nav>

@@ -60,11 +60,6 @@ async function initDatabase() {
   )`);
   await pool.query('ALTER TABLE workouts ADD COLUMN IF NOT EXISTS workout_time TIME');
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_workouts_user_date ON workouts (user_id, date)`);
-  await pool.query(`CREATE TABLE IF NOT EXISTS routines (
-    user_id INTEGER PRIMARY KEY,
-    routine_json TEXT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-  )`);
   await pool.query(`CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
@@ -338,21 +333,6 @@ app.delete('/api/workouts/:id', requireUser, async (req, res, next) => {
   try {
     await pool.query('DELETE FROM workouts WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
     res.status(204).end();
-  } catch (error) { next(error); }
-});
-app.get('/api/routine', requireUser, async (req, res, next) => {
-  try {
-    const { rows } = await pool.query('SELECT routine_json FROM routines WHERE user_id = $1', [req.user.id]);
-    res.json({ routine: rows.length ? parseProfile(rows[0].routine_json) : { days: [] } });
-  } catch (error) { next(error); }
-});
-app.put('/api/routine', requireUser, async (req, res, next) => {
-  try {
-    const routine = req.body && Array.isArray(req.body.days)
-      ? { days: req.body.days.slice(0, 7).map(day => ({ name: String(day.name || 'Träningsdag').slice(0, 50), exercises: Array.isArray(day.exercises) ? day.exercises.map(exercise => String(exercise).slice(0, 100)).slice(0, 30) : [] })) }
-      : { days: [] };
-    await pool.query('INSERT INTO routines (user_id, routine_json) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET routine_json = EXCLUDED.routine_json', [req.user.id, JSON.stringify(routine)]);
-    res.json({ routine });
   } catch (error) { next(error); }
 });
 app.put('/api/profile', requireUser, async (req, res, next) => {
