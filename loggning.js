@@ -15,6 +15,8 @@ const today = new Date();
 const localDate = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
 document.getElementById('measurement-date').value = localDate;
 document.getElementById('workout-date').value = localDate;
+const localTime = () => [String(new Date().getHours()).padStart(2, '0'), String(new Date().getMinutes()).padStart(2, '0')].join(':');
+document.getElementById('workout-time').value = localTime();
 
 const authForm = document.getElementById('auth-form');
 const authStatus = document.getElementById('auth-status');
@@ -140,7 +142,7 @@ function renderWorkouts() {
 		return;
 	}
 	sorted.slice(0, 10).forEach(item => {
-		const details = `${item.muscle_group} · ${item.sets} × ${item.reps} · ${item.weight} kg${item.notes ? ` · ${item.notes}` : ''}`;
+		const details = `${item.muscle_group} · ${item.sets} × ${item.reps} · ${item.weight} kg${item.workout_time ? ` · ${item.workout_time.slice(0, 5)}` : ''}${item.notes ? ` · ${item.notes}` : ''}`;
 		list.append(createEntry(`${formatDate(item.date)} – ${item.exercise}`, details, item.id, async () => {
 			try {
 				await api(`/workouts/${encodeURIComponent(item.id)}`, { method: 'DELETE' });
@@ -245,6 +247,7 @@ document.getElementById('workout-form').addEventListener('submit', async event =
 		renderWorkouts();
 		form.reset();
 		form.elements.date.value = localDate;
+		form.elements.time.value = localTime();
 		form.elements.sets.value = '3';
 		form.elements.reps.value = '8';
 		form.elements.weight.value = '0';

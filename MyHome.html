@@ -129,6 +129,22 @@
 		.exercise-medal-details small { margin-top: 3px; color: var(--muted); font-size: 11px; }
 		.exercise-medal-level { color: var(--green); font-size: 10px; font-weight: 700; white-space: nowrap; }
 		.medal-guide { margin: 0 0 12px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+		.motivation-message { margin: 10px 0 0; color: var(--green); font-size: 12px; font-weight: 600; line-height: 1.5; }
+		.progress-panel { grid-column: 1 / -1; }
+		.progress-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+		.progress-chart { display: flex; align-items: flex-end; gap: 8px; min-height: 180px; padding: 16px 4px 0; border-bottom: 1px solid var(--line); }
+		.progress-bar-wrap { display: grid; flex: 1; grid-template-rows: 1fr auto; gap: 8px; height: 160px; min-width: 0; text-align: center; }
+		.progress-bar-track { display: flex; align-items: flex-end; justify-content: center; height: 100%; }
+		.progress-bar { width: min(100%, 28px); min-height: 3px; border-radius: 5px 5px 1px 1px; background: var(--mint); }
+		.progress-bar.current { background: var(--orange); }
+		.progress-bar-label { min-height: 26px; color: var(--muted); font-size: 9px; }
+		.body-chart { display: block; width: 100%; height: 180px; overflow: visible; }
+		.chart-empty { display: grid; place-items: center; min-height: 150px; color: var(--muted); font-size: 12px; text-align: center; }
+		.chart-empty[hidden] { display: none; }
+		.reminder-controls { display: grid; gap: 13px; }
+		.reminder-enabled { display: flex; grid-template-columns: none; align-items: center; gap: 9px; }
+		.reminder-enabled input { width: auto; }
+		.reminder-help { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
 		.pr-list li, .plan-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #edf0ec; }
 		.pr-list li:last-child, .plan-list li:last-child { border-bottom: 0; }
 		.pr-list strong, .plan-list strong { display: block; font-size: 12px; }
@@ -136,6 +152,7 @@
 		.pr-score { color: var(--green); font-size: 12px; font-weight: 700; }
 		.mini-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 999px; background: var(--paper); color: var(--green-dark); font-size: 10px; font-weight: 700; }
 		@media (max-width: 900px) { .dashboard-insights { grid-template-columns: 1fr; } }
+		@media (max-width: 760px) { .progress-grid { grid-template-columns: 1fr; } }
 		@media (max-width: 650px) { .profile-layout { grid-template-columns: 1fr; gap: 15px; } .profile-identity { display: grid; grid-template-columns: auto 1fr; column-gap: 15px; } .profile-avatar-large { grid-row: span 2; } }
 		@media (max-width: 900px) { .app-shell { grid-template-columns: 1fr; } .sidebar { padding: 16px 20px; } .brand { padding: 0 0 15px; } nav { display: flex; overflow-x: auto; } .nav-label, .sidebar-bottom { display: none; } .nav-item { white-space: nowrap; } main { padding: 28px 18px; } .stats { grid-template-columns: 1fr 1fr; } .content-grid, .feature-grid { grid-template-columns: 1fr; } .history { grid-column: auto; } }
 		@media (max-width: 520px) { .topbar { display: block; } .date-badge { width: fit-content; margin-top: 14px; } .account-actions { margin-top: 14px; } .stats { gap: 10px; } .stat-card { min-height: 112px; padding: 15px; } .stat-value { font-size: 23px; } .panel { padding: 18px; } .panel-heading { align-items: flex-start; flex-direction: column; } .periods { align-self: stretch; justify-content: space-between; } .chart { gap: 5px; } .chart-labels { gap: 5px; } .history-table { display: block; overflow-x: auto; white-space: nowrap; } }
@@ -177,8 +194,9 @@
 			<section class="dashboard-insights" id="dashboard-insights">
 				<article class="panel insight-card">
 					<div class="panel-heading"><div><h2>Motivation & badges</h2><p class="panel-subtitle">Samla medaljer för dina träningsframsteg.</p></div></div>
-					<p class="medal-guide">Tjäna brons efter 1 pass, silver efter 5 och guld efter 10 pass i samma övning.</p>
+					<p class="medal-guide">Övningsmedaljer: brons efter 1 pass, silver efter 5 och guld efter 10. Samla också träningsdagar och morgon-, dag- och kvällsmedaljer.</p>
 					<div class="badge-list exercise-medals" id="badge-list" aria-live="polite"></div>
+					<p class="motivation-message" id="motivation-message"></p>
 				</article>
 				<article class="panel insight-card">
 					<div class="panel-heading"><div><h2>PR & övningar</h2><p class="panel-subtitle">Vilken övning lyfter du högst just nu?</p></div></div>
@@ -188,6 +206,14 @@
 					<div class="panel-heading"><div><h2>Veckans fokus</h2><p class="panel-subtitle">Ett enkelt träningsplan för nästa cykel.</p></div></div>
 					<ul class="plan-list" id="training-plan"></ul>
 				</article>
+			</section>
+
+			<section class="panel progress-panel" id="progress">
+				<div class="panel-heading"><div><h2>Din träning & kroppsutveckling</h2><p class="panel-subtitle">Följ antal aktiva dagar per vecka och förändringar i dina mått.</p></div></div>
+				<div class="progress-grid">
+					<div><h3>Träningsdagar · senaste 12 veckorna</h3><p class="panel-subtitle">Antal dagar med minst ett loggat pass per vecka.</p><div class="progress-chart" id="weekly-workout-chart" role="img" aria-label="Träningsdagar per vecka"></div></div>
+					<div><div class="panel-heading"><div><h3>Kroppens utveckling</h3><p class="panel-subtitle">Välj ett mått för att se din historik.</p></div><label class="chart-metric-label">Mått<select id="body-progress-metric"><option value="weight">Vikt (kg)</option><option value="waist">Midja (cm)</option><option value="chest">Bröst (cm)</option><option value="arm">Överarm (cm)</option><option value="thigh">Lår (cm)</option><option value="hip">Höft (cm)</option></select></label></div><svg class="body-chart" id="body-progress-chart" viewBox="0 0 600 180" role="img" aria-label="Diagram över kroppens utveckling"></svg><p class="chart-empty" id="body-progress-empty" hidden></p></div>
+				</div>
 			</section>
 
 			<section class="panel form-panel" id="new-measurement"><div class="panel-heading"><div><h2>Ny mätning</h2><p class="panel-subtitle">Fyll i det du vill följa idag.</p></div></div><form class="measurement-form" id="measurement-form"><label>Datum<input type="date" name="date" id="date-input" required></label><div class="field-grid"><label>Kroppsvikt<div class="unit-input"><input type="number" name="weight" step="0.1" min="0" placeholder="0.0"><span>kg</span></div></label><label>Midja<div class="unit-input"><input type="number" name="waist" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Bröst<div class="unit-input"><input type="number" name="chest" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Överarm<div class="unit-input"><input type="number" name="arm" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Lår<div class="unit-input"><input type="number" name="thigh" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label><label>Höft<div class="unit-input"><input type="number" name="hip" step="0.1" min="0" placeholder="0.0"><span>cm</span></div></label></div><button class="save-button" type="submit">Spara mätning <span>→</span></button></form></section>
@@ -200,6 +226,7 @@
 					<section class="panel feature-panel"><div class="panel-heading"><div><h2>Mål & delmål</h2><p class="panel-subtitle">Se hur du närmar dig dina mål.</p></div></div><div class="goal-progress" id="goal-progress"><strong>Logga in för att sätta mål</strong>Din utveckling visas här.</div><form class="goal-form" id="goal-form"><div class="goal-grid"><label>Målvikt<div class="unit-input"><input type="number" name="goalWeight" id="goal-weight" step="0.1" min="0" placeholder="0.0"><span>kg</span></div></label><label>Måldatum<input type="date" name="goalDate" id="goal-date"></label></div><button class="save-button" type="submit">Spara mål <span>→</span></button></form></section>
 					<section class="panel feature-panel"><div class="panel-heading"><div><h2>Hälsosammanfattning</h2><p class="panel-subtitle">En enkel överblick, inte medicinsk rådgivning.</p></div></div><div class="metric-list" id="health-summary"><div class="empty-state">Spara längd och mätningar i din profil för att se sammanfattningen.</div></div><div class="health-note">Mät samma tid på dagen och under liknande förhållanden för jämförbara resultat.</div></section>
 					<section class="panel feature-panel"><div class="panel-heading"><div><h2>Påminnelse</h2><p class="panel-subtitle">Skapa en återkommande mätvana.</p></div></div><form class="reminder-form" id="reminder-form"><label>Nästa mätning<input type="date" name="reminderDate" id="reminder-date"></label><label>Påminn mig<select name="frequency" id="reminder-frequency"><option value="weekly">Varje vecka</option><option value="monthly">Varje månad</option></select></label><button class="save-button" type="submit">Spara påminnelse <span>→</span></button></form><div class="reminder-status" id="reminder-status">Ingen påminnelse sparad ännu.</div></section>
+					<section class="panel feature-panel"><div class="panel-heading"><div><h2>Träningspåminnelse</h2><p class="panel-subtitle">Välj en tid som passar din vardag.</p></div></div><form class="reminder-controls" id="workout-reminder-form"><label class="reminder-enabled"><input type="checkbox" name="workoutReminderEnabled" id="workout-reminder-enabled"> Aktivera träningspåminnelse</label><div class="goal-grid"><label>Tid<input type="time" name="workoutReminderTime" id="workout-reminder-time" value="18:00" required></label><label>Upprepas<select name="workoutReminderFrequency" id="workout-reminder-frequency"><option value="daily">Varje dag</option><option value="weekdays">Vardagar</option><option value="weekends">Helger</option></select></label></div><button class="save-button" type="submit">Spara träningspåminnelse →</button><button class="export-button" id="enable-notifications" type="button">Tillåt webbläsaraviseringar</button><p class="reminder-help">Påminnelsen visas när Formkurva är öppet. Webbläsaraviseringar kräver tillåtelse och en säker anslutning.</p><p class="reminder-status" id="workout-reminder-status" role="status" aria-live="polite">Ingen träningspåminnelse aktiverad.</p></form></section>
 					<section class="panel feature-panel"><div class="panel-heading"><div><h2>Anteckning & progressbild</h2><p class="panel-subtitle">Spara dagens känsla tillsammans med mätningen.</p></div></div><form class="note-form" id="note-form"><label>Dagens anteckning<textarea name="note" id="daily-note" placeholder="Träning, energi, sömn eller annat..."></textarea></label><label class="photo-drop">Lägg till progressbild<input type="file" id="progress-photo" accept="image/*"><span>Välj en bild från enheten</span></label><img class="photo-preview" id="photo-preview" alt="Förhandsvisning av progressbild"><button class="save-button" type="submit">Spara anteckning <span>→</span></button></form></section>
 				</div>
 
@@ -250,6 +277,10 @@
 			document.getElementById('reminder-date').value = profile.reminderDate || '';
 			document.getElementById('reminder-frequency').value = profile.frequency || 'weekly';
 			document.getElementById('reminder-status').textContent = profile.reminderDate ? 'Påminnelse sparad till ' + new Date(profile.reminderDate + 'T12:00:00').toLocaleDateString('sv-SE') + '.' : 'Ingen påminnelse sparad ännu.';
+			document.getElementById('workout-reminder-enabled').checked = profile.workoutReminderEnabled === true;
+			document.getElementById('workout-reminder-time').value = profile.workoutReminderTime || '18:00';
+			document.getElementById('workout-reminder-frequency').value = profile.workoutReminderFrequency || 'daily';
+			updateWorkoutReminderStatus();
 			document.getElementById('daily-note').value = profile.note || '';
 			document.getElementById('photo-preview').src = profile.photo || '';
 			document.getElementById('photo-preview').style.display = profile.photo ? 'block' : 'none';
@@ -288,6 +319,31 @@
 			const lastDate = [...measurements].sort((a, b) => new Date(b.date) - new Date(a.date))[0]?.date;
 			streakChange.textContent = lastDate ? 'Senaste mätning: ' + new Date(lastDate + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }) : 'Aktiv idag';
 		}
+		function medalCard(titleText, descriptionText, count, thresholds) {
+			const tierIndex = thresholds.reduce((best, threshold, index) => count >= threshold ? index : best, -1);
+			const tier = tierIndex >= 0 ? tierIndex : 0;
+			const icons = ['🥉', '🥈', '🥇'];
+			const names = ['Brons', 'Silver', 'Guld'];
+			const nextThreshold = thresholds[tierIndex + 1];
+			const entry = document.createElement('div');
+			entry.className = 'exercise-medal';
+			const icon = document.createElement('span');
+			icon.className = 'exercise-medal-icon';
+			icon.setAttribute('aria-hidden', 'true');
+			icon.textContent = icons[tier];
+			const details = document.createElement('span');
+			details.className = 'exercise-medal-details';
+			const title = document.createElement('strong');
+			title.textContent = titleText;
+			const progress = document.createElement('small');
+			progress.textContent = nextThreshold ? `${count} av ${nextThreshold} ${descriptionText}` : `${count} ${descriptionText}`;
+			const level = document.createElement('span');
+			level.className = 'exercise-medal-level';
+			level.textContent = tierIndex < 0 ? `Nästa: ${names[tier]}` : names[tier];
+			details.append(title, progress);
+			entry.append(icon, details, level);
+			return entry;
+		}
 		function renderExerciseMedals() {
 			const list = document.getElementById('badge-list');
 			const counts = new Map();
@@ -299,36 +355,151 @@
 				current.count += 1;
 				counts.set(key, current);
 			});
-			const medals = [...counts.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'sv'));
 			if (!currentUser) {
 				list.innerHTML = '<div class="empty-state">Logga in för att samla medaljer i dina övningar.</div>';
+				document.getElementById('motivation-message').textContent = 'Varje träningspass räknas. Börja lugnt och bygg vidare i din egen takt.';
 				return;
 			}
-			if (!medals.length) {
-				list.innerHTML = '<div class="empty-state">Logga ditt första träningspass för att börja samla medaljer.</div>';
-				return;
-			}
-			list.replaceChildren(...medals.map(item => {
-				const tier = item.count >= 10 ? { name: 'Guld', icon: '🥇', next: null } : item.count >= 5 ? { name: 'Silver', icon: '🥈', next: 10 } : item.count >= 1 ? { name: 'Brons', icon: '🥉', next: 5 } : null;
-				const entry = document.createElement('div');
-				entry.className = 'exercise-medal';
-				const icon = document.createElement('span');
-				icon.className = 'exercise-medal-icon';
-				icon.setAttribute('aria-hidden', 'true');
-				icon.textContent = tier.icon;
-				const details = document.createElement('span');
-				details.className = 'exercise-medal-details';
-				const title = document.createElement('strong');
-				title.textContent = item.name;
-				const progress = document.createElement('small');
-				progress.textContent = tier.next ? `${item.count} av ${tier.next} pass till nästa medalj` : `${item.count} pass loggade`;
-				const level = document.createElement('span');
-				level.className = 'exercise-medal-level';
-				level.textContent = tier.name;
-				details.append(title, progress);
-				entry.append(icon, details, level);
-				return entry;
+			const exerciseMedals = [...counts.values()]
+				.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'sv'))
+				.map(item => medalCard(item.name, 'pass i övningen', item.count, [1, 5, 10]));
+			const distinctDates = new Set(workouts.map(item => item.date).filter(Boolean));
+			const timeDates = { morgon: new Set(), dag: new Set(), kväll: new Set() };
+			workouts.forEach(item => {
+				const hour = Number(String(item.workout_time || '').slice(0, 2));
+				if (!item.date || !Number.isInteger(hour)) return;
+				if (hour >= 5 && hour < 9) timeDates.morgon.add(item.date);
+				else if (hour >= 9 && hour < 17) timeDates.dag.add(item.date);
+				else if (hour >= 17 && hour < 23) timeDates.kväll.add(item.date);
+			});
+			const activityMedals = [
+				medalCard('Träningspass totalt', 'loggade övningar', workouts.length, [10, 50, 100]),
+				medalCard('Aktiva träningsdagar', 'träningsdagar', distinctDates.size, [3, 10, 25]),
+				...[
+					['Morgontränare', 'morgon', timeDates.morgon.size],
+					['Dagsform', 'dag', timeDates.dag.size],
+					['Kvällskämpe', 'kväll', timeDates.kväll.size]
+				].map(([name, period, count]) => medalCard(name, `dagar · kl. ${period === 'morgon' ? '05–09' : period === 'dag' ? '09–17' : '17–23'}`, count, [1, 5, 20]))
+			];
+			list.replaceChildren(...activityMedals, ...exerciseMedals);
+			const orderedDates = [...distinctDates].sort();
+			const lastDate = orderedDates.at(-1);
+			const daysSinceWorkout = lastDate ? Math.floor((new Date().setHours(12, 0, 0, 0) - new Date(`${lastDate}T12:00:00`).getTime()) / 86400000) : Infinity;
+			const message = workouts.length === 0 ? 'Ditt första träningspass är starten. Logga ett pass och börja samla medaljer.' :
+				daysSinceWorkout === 0 ? `Snyggt jobbat – du tränade idag! ${workouts.length} övningar loggade. Fortsätt i din egen takt.` :
+				daysSinceWorkout <= 3 ? `${distinctDates.size} träningsdagar hittills. Du är på god väg – ett pass i taget!` :
+				'Det är okej att vila. När du är redo väntar nästa pass – alla framsteg räknas.';
+			document.getElementById('motivation-message').textContent = message;
+		}
+		function renderProgressCharts() {
+			const weekChart = document.getElementById('weekly-workout-chart');
+			const today = new Date();
+			today.setHours(12, 0, 0, 0);
+			const thisMonday = new Date(today);
+			thisMonday.setDate(today.getDate() - (today.getDay() + 6) % 7);
+			const weeks = Array.from({ length: 12 }, (_, index) => {
+				const start = new Date(thisMonday);
+				start.setDate(thisMonday.getDate() - (11 - index) * 7);
+				return { start, dates: new Set() };
+			});
+			workouts.forEach(workout => {
+				if (!workout.date) return;
+				const [year, month, day] = workout.date.slice(0, 10).split('-').map(Number);
+				const workoutDate = new Date(year, month - 1, day, 12);
+				const weekIndex = Math.floor((workoutDate.getTime() - weeks[0].start.getTime()) / (7 * 86400000));
+				if (weekIndex >= 0 && weekIndex < weeks.length) weeks[weekIndex].dates.add(workout.date.slice(0, 10));
+			});
+			const maxDays = Math.max(3, ...weeks.map(week => week.dates.size));
+			weekChart.replaceChildren(...weeks.map((week, index) => {
+				const wrap = document.createElement('div');
+				wrap.className = 'progress-bar-wrap';
+				const track = document.createElement('div');
+				track.className = 'progress-bar-track';
+				const bar = document.createElement('div');
+				bar.className = `progress-bar${index === weeks.length - 1 ? ' current' : ''}`;
+				const days = week.dates.size;
+				bar.style.height = `${Math.max(days ? 7 : 2, days / maxDays * 100)}%`;
+				bar.title = `${week.start.toLocaleDateString('sv-SE')} · ${days} träningsdagar`;
+				track.append(bar);
+				const label = document.createElement('span');
+				label.className = 'progress-bar-label';
+				label.textContent = week.start.toLocaleDateString('sv-SE', { day: 'numeric', month: 'numeric' });
+				wrap.append(track, label);
+				return wrap;
 			}));
+
+			const metric = document.getElementById('body-progress-metric').value;
+			const metricLabels = { weight: ['Vikt', 'kg'], waist: ['Midja', 'cm'], chest: ['Bröst', 'cm'], arm: ['Överarm', 'cm'], thigh: ['Lår', 'cm'], hip: ['Höft', 'cm'] };
+			const [metricName, unit] = metricLabels[metric];
+			const points = [...measurements]
+				.filter(item => item[metric] !== '' && item[metric] !== undefined && item[metric] !== null && Number.isFinite(Number(item[metric])))
+				.sort((a, b) => String(a.date).localeCompare(String(b.date)))
+				.slice(-20);
+			const svg = document.getElementById('body-progress-chart');
+			const empty = document.getElementById('body-progress-empty');
+			svg.replaceChildren();
+			svg.setAttribute('aria-label', `${metricName} över tid`);
+			empty.hidden = points.length > 0;
+			empty.textContent = `Spara minst en mätning med ${metricName.toLocaleLowerCase('sv')} för att se utvecklingen.`;
+			if (!points.length) return;
+			const ns = 'http://www.w3.org/2000/svg';
+			const addSvg = (tag, attributes, text) => {
+				const node = document.createElementNS(ns, tag);
+				Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, String(value)));
+				if (text) node.textContent = text;
+				svg.append(node);
+				return node;
+			};
+			const values = points.map(item => Number(item[metric]));
+			const low = Math.min(...values);
+			const high = Math.max(...values);
+			const padding = Math.max((high - low) * 0.15, Math.abs(high) * 0.02, 0.5);
+			const min = low - padding;
+			const max = high + padding;
+			const x = index => points.length === 1 ? 300 : 42 + index * 516 / (points.length - 1);
+			const y = value => 145 - (value - min) / (max - min) * 112;
+			[0, 1, 2].forEach(index => {
+				const gridY = 35 + index * 55;
+				addSvg('line', { x1: 35, y1: gridY, x2: 590, y2: gridY, stroke: 'var(--line)', 'stroke-width': 1 });
+			});
+			addSvg('polyline', { points: points.map((item, index) => `${x(index)},${y(Number(item[metric]))}`).join(' '), fill: 'none', stroke: 'var(--green)', 'stroke-width': 3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+			points.forEach((item, index) => {
+				const point = addSvg('circle', { cx: x(index), cy: y(Number(item[metric])), r: 4, fill: index === points.length - 1 ? 'var(--orange)' : 'var(--green)' });
+				const title = document.createElementNS(ns, 'title');
+				title.textContent = `${formatNumber(item[metric], unit)} · ${new Date(`${item.date}T12:00:00`).toLocaleDateString('sv-SE')}`;
+				point.append(title);
+			});
+			const first = points[0];
+			const last = points.at(-1);
+			addSvg('text', { x: 35, y: 173, fill: 'var(--muted)', 'font-size': 11 }, new Date(`${first.date}T12:00:00`).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }));
+			if (points.length > 1) addSvg('text', { x: 590, y: 173, fill: 'var(--muted)', 'font-size': 11, 'text-anchor': 'end' }, new Date(`${last.date}T12:00:00`).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }));
+			addSvg('text', { x: 590, y: 18, fill: 'var(--green)', 'font-size': 13, 'font-weight': 700, 'text-anchor': 'end' }, `${formatNumber(last[metric], unit)} nu`);
+		}
+		function updateWorkoutReminderStatus() {
+			const profile = getProfile();
+			const status = document.getElementById('workout-reminder-status');
+			if (!profile.workoutReminderEnabled) {
+				status.textContent = 'Ingen träningspåminnelse aktiverad.';
+				return;
+			}
+			const repeat = { daily: 'varje dag', weekdays: 'på vardagar', weekends: 'på helger' }[profile.workoutReminderFrequency] || 'varje dag';
+			status.textContent = `Påminnelse kl. ${profile.workoutReminderTime || '18:00'} ${repeat}. Formkurva behöver vara öppet för att påminna dig.`;
+		}
+		function checkWorkoutReminder() {
+			if (!currentUser || !currentProfile.workoutReminderEnabled || document.visibilityState === 'prerender') return;
+			const now = new Date();
+			const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+			if (time !== currentProfile.workoutReminderTime) return;
+			const frequency = currentProfile.workoutReminderFrequency || 'daily';
+			if (frequency === 'weekdays' && (now.getDay() === 0 || now.getDay() === 6)) return;
+			if (frequency === 'weekends' && now.getDay() !== 0 && now.getDay() !== 6) return;
+			const reminderKey = `formkurva-workout-reminder-${sessionUserId}-${dateToInput(now)}`;
+			if (localStorage.getItem(reminderKey)) return;
+			localStorage.setItem(reminderKey, 'sent');
+			showToast('Dags för ett träningspass? Små steg tar dig framåt!');
+			if ('Notification' in window && Notification.permission === 'granted') {
+				new Notification('Formkurva – dags att träna', { body: 'Ett pass i taget. Du klarar det!' });
+			}
 		}
 		function renderHealth() {
 			const profile = getProfile(); const latest = [...measurements].sort((a, b) => new Date(a.date) - new Date(b.date)).at(-1); const height = Number(profile.height) / 100; const weight = Number(latest?.weight); const waist = Number(latest?.waist); const summary = document.getElementById('health-summary');
@@ -422,11 +593,40 @@
 		profileForm.addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(true); return; } const profile = Object.fromEntries(new FormData(profileForm)); delete profile.email; try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); currentProfile = result.profile; } else localStorage.setItem(profileKey(), JSON.stringify(profile)); updateAccountUi(); applyTheme(); renderProfile(); renderHealth(); renderGoal(); showToast('Profilen är uppdaterad.'); } catch (error) { handleApiError(error); } });
 		document.getElementById('goal-form').addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(true); return; } const goal = Object.fromEntries(new FormData(event.target)); const profile = getProfile(); Object.assign(profile, goal); try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); currentProfile = result.profile; } else localStorage.setItem(profileKey(), JSON.stringify(profile)); renderProfile(); renderGoal(); showToast('Målet är sparat.'); } catch (error) { handleApiError(error); } });
 		document.getElementById('reminder-form').addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(true); return; } const reminder = Object.fromEntries(new FormData(event.target)); const profile = getProfile(); Object.assign(profile, reminder); try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); currentProfile = result.profile; } else localStorage.setItem(profileKey(), JSON.stringify(profile)); renderProfile(); showToast('Påminnelsen är sparad.'); } catch (error) { handleApiError(error); } });
+		document.getElementById('workout-reminder-form').addEventListener('submit', async event => {
+			event.preventDefault();
+			if (!currentUser) { openAuth(true); return; }
+			const profile = { ...getProfile(), workoutReminderEnabled: document.getElementById('workout-reminder-enabled').checked, workoutReminderTime: document.getElementById('workout-reminder-time').value, workoutReminderFrequency: document.getElementById('workout-reminder-frequency').value };
+			try {
+				if (serverMode) {
+					const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) });
+					currentProfile = result.profile;
+				} else localStorage.setItem(profileKey(), JSON.stringify(profile));
+				updateWorkoutReminderStatus();
+				showToast(profile.workoutReminderEnabled ? 'Träningspåminnelsen är sparad.' : 'Träningspåminnelsen är avstängd.');
+			} catch (error) { handleApiError(error); }
+		});
+		document.getElementById('enable-notifications').addEventListener('click', async () => {
+			if (!('Notification' in window)) {
+				showToast('Webbläsaren stöder inte aviseringar. Påminnelsen visas i Formkurva när sidan är öppen.');
+				return;
+			}
+			if (!window.isSecureContext) {
+				showToast('Webbläsaraviseringar kräver HTTPS eller localhost. Påminnelsen visas ändå när Formkurva är öppet.');
+				return;
+			}
+			try {
+				const permission = await Notification.requestPermission();
+				showToast(permission === 'granted' ? 'Webbläsaraviseringar är aktiverade.' : 'Aviseringar tilläts inte. Påminnelsen visas i Formkurva när sidan är öppen.');
+			} catch (error) { handleApiError(error); }
+		});
+		setInterval(checkWorkoutReminder, 30000);
 		document.getElementById('note-form').addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(true); return; } const profile = getProfile(); profile.note = document.getElementById('daily-note').value; try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); currentProfile = result.profile; } else localStorage.setItem(profileKey(), JSON.stringify(profile)); showToast('Anteckningen är sparad.'); } catch (error) { handleApiError(error); } });
 		document.getElementById('progress-photo').addEventListener('change', event => { const file = event.target.files[0]; if (!file || !currentUser) return; const reader = new FileReader(); reader.onload = async () => { const profile = getProfile(); profile.photo = reader.result; try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); currentProfile = result.profile; } else localStorage.setItem(profileKey(), JSON.stringify(profile)); renderProfile(); showToast('Progressbilden är sparad.'); } catch (error) { handleApiError(error); } }; reader.readAsDataURL(file); });
 		document.getElementById('export-all').addEventListener('click', () => { if (!currentUser) { openAuth(); return; } const payload = { profile: getProfile(), measurements }; const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'formkurva-all-data.json'; link.click(); URL.revokeObjectURL(link.href); showToast('All data laddades ner.'); });
 		document.getElementById('delete-data').addEventListener('click', async () => { if (!currentUser) { openAuth(); return; } if (!confirm('Vill du radera alla dina mätningar och profiluppgifter?')) return; try { if (serverMode) await api('/account', { method: 'DELETE' }); else { localStorage.removeItem(storageKey()); localStorage.removeItem(profileKey()); } currentUser = ''; currentProfile = {}; sessionUserId = ''; currentRole = ''; measurements = []; workouts = []; updateAccountUi(); applyTheme(); renderProfile(); render(); renderGoal(); renderHealth(); showToast('Din data är raderad.'); } catch (error) { handleApiError(error); } });
 		document.getElementById('chart-metric')?.addEventListener('change', event => { currentMetric = event.target.value; render(); });
+		document.getElementById('body-progress-metric').addEventListener('change', renderProgressCharts);
 		document.querySelectorAll('.period').forEach(button => button.addEventListener('click', () => { activePeriodMonths = Number(button.dataset.months); document.querySelectorAll('.period').forEach(item => item.classList.remove('active')); button.classList.add('active'); render(); }));
 		document.getElementById('export-button').addEventListener('click', () => { if (!currentUser) { openAuth(); return; } if (!measurements.length) { showToast('Spara en mätning först.'); return; } const blob = new Blob([JSON.stringify({ account: currentUser, measurements }, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'formkurva-resultat.json'; link.click(); URL.revokeObjectURL(link.href); showToast('Resultaten laddades ner.'); });
 		document.getElementById('password-form').addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(); return; } try { await api('/auth/change-password', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(event.target))) }); event.target.reset(); showToast('Lösenordet är ändrat.'); } catch (error) { handleApiError(error); } });
@@ -440,6 +640,7 @@
 		}
 		function render() {
 			renderExerciseMedals();
+			renderProgressCharts();
 			const sorted = [...measurements].sort((a, b) => new Date(a.date) - new Date(b.date));
 			const metricSelector = document.getElementById('chart-metric');
 			const chartTitle = metricSelector?.selectedOptions?.[0]?.textContent || ({ weight: 'Vikt', waist: 'Midja', chest: 'Bröst', arm: 'Överarm', thigh: 'Lår', hip: 'Höft' }[currentMetric] || 'Vikt');
