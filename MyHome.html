@@ -164,6 +164,11 @@
 		.pr-list li:last-child, .plan-list li:last-child { border-bottom: 0; }
 		.pr-list strong, .plan-list strong { display: block; font-size: 12px; }
 		.pr-list small, .plan-list small { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+		.pr-value, .plan-badge { flex: 0 0 auto; color: var(--green); font-size: 12px; font-weight: 700; text-align: right; white-space: nowrap; }
+		.focus-picker { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
+		.focus-chip { padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--muted); font-size: 11px; font-weight: 700; cursor: pointer; transition: all .15s ease; }
+		.focus-chip:hover { border-color: var(--green); }
+		.focus-chip.active { background: var(--green); border-color: var(--green); color: white; }
 		.pr-score { color: var(--green); font-size: 12px; font-weight: 700; }
 		.mini-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 999px; background: var(--paper); color: var(--green-dark); font-size: 10px; font-weight: 700; }
 		@media (max-width: 900px) { .dashboard-insights { grid-template-columns: 1fr; } }
@@ -227,7 +232,8 @@
 					<ul class="pr-list" id="pr-list"></ul>
 				</article>
 				<article class="panel insight-card">
-					<div class="panel-heading"><div><h2>Veckans fokus</h2><p class="panel-subtitle">Ett enkelt träningsplan för nästa cykel.</p></div></div>
+					<div class="panel-heading"><div><h2>Veckans fokus</h2><p class="panel-subtitle">Välj vad du vill fokusera på – vi föreslår övningar.</p></div></div>
+					<div class="focus-picker" id="focus-picker" role="group" aria-label="Välj fokusområden för veckan"></div>
 					<ul class="plan-list" id="training-plan"></ul>
 				</article>
 			</section>
@@ -316,6 +322,7 @@
 			document.getElementById('daily-note').value = profile.note || '';
 			document.getElementById('photo-preview').src = profile.photo || '';
 			document.getElementById('photo-preview').style.display = profile.photo ? 'block' : 'none';
+			renderFocusPicker();
 		}
 		function getProfile() { return serverMode ? currentProfile : JSON.parse(localStorage.getItem(profileKey()) || '{}'); }
 		async function loadServerState() { if (!serverMode) return; try { const session = await api('/me'); currentUser = session.user?.email || ''; sessionUserId = session.user?.id || ''; currentRole = session.user?.role || ''; currentProfile = session.user?.profile || {}; if (session.user) { const [measurementResult, workoutResult] = await Promise.all([api('/measurements'), api('/workouts')]); measurements = measurementResult.measurements; workouts = workoutResult.workouts; } else { measurements = []; workouts = []; } updateAccountUi(); applyTheme(); renderProfile(); render(); if (currentRole === 'admin') loadAdminUsers(); } catch (error) { handleApiError(error); } }
@@ -428,6 +435,96 @@
 				daysSinceWorkout <= 3 ? `${distinctDates.size} träningsdagar hittills. Du är på god väg – ett pass i taget!` :
 				'Det är okej att vila. När du är redo väntar nästa pass – alla framsteg räknas.';
 			document.getElementById('motivation-message').textContent = message;
+		}
+		function renderPRList() {
+			const list = document.getElementById('pr-list');
+			if (!list) return;
+			if (!currentUser) { list.innerHTML = '<div class="empty-state">Logga in för att se dina personbästa.</div>'; return; }
+			const prMap = new Map();
+			workouts.forEach(workout => {
+				const exercise = String(workout.exercise || '').trim();
+				if (!exercise) return;
+				const key = exercise.toLocaleLowerCase('sv-SE');
+				const weight = Number(workout.weight) || 0;
+				const reps = Number(workout.reps) || 0;
+				const current = prMap.get(key) || { name: exercise, weight: 0, reps: 0, sessions: 0, lastDate: '' };
+				current.sessions += 1;
+				if (weight > current.weight || (weight === current.weight && reps > current.reps)) { current.weight = weight; current.reps = reps; }
+				if (workout.date && (!current.lastDate || workout.date > current.lastDate)) current.lastDate = workout.date;
+				current.name = exercise;
+				prMap.set(key, current);
+			});
+			const items = [...prMap.values()].sort((a, b) => b.weight - a.weight || a.name.localeCompare(b.name, 'sv'));
+			list.innerHTML = items.length ? items.map(item => '<li><div><strong>' + item.name + '</strong><small>' + item.sessions + ' pass loggade' + (item.lastDate ? ' · senast ' + new Date(item.lastDate + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }) : '') + '</small></div><span class="pr-value">' + formatNumber(item.weight, 'kg') + ' × ' + item.reps + '</span></li>').join('') : '<div class="empty-state">Logga ett träningspass för att se dina personbästa här.</div>';
+		}
+		const focusGroups = ['Bröst', 'Rygg', 'Ben', 'Axlar', 'Armar', 'Rumpa', 'Mage', 'Helkropp'];
+		const exerciseSuggestions = {
+			'Bröst': ['Bänkpress', 'Hantelpress', 'Dips'],
+			'Rygg': ['Marklyft', 'Stående rodd', 'Chins'],
+			'Ben': ['Knäböj', 'Utfallssteg', 'Benpress'],
+			'Axlar': ['Axelpress', 'Sidolyft'],
+			'Armar': ['Bicepscurl', 'Tricepspress'],
+			'Rumpa': ['Höftlyft', 'Bulgarisk utfallssteg'],
+			'Mage': ['Plankan', 'Situps'],
+			'Helkropp': ['Burpees', 'Roddmaskin']
+		};
+		function renderFocusPicker() {
+			const picker = document.getElementById('focus-picker');
+			if (!picker) return;
+			if (!picker.dataset.built) {
+				picker.dataset.built = 'true';
+				picker.innerHTML = focusGroups.map(group => '<button type="button" class="focus-chip" data-group="' + group + '">' + group + '</button>').join('');
+				picker.addEventListener('click', async event => {
+					const chip = event.target.closest('.focus-chip');
+					if (!chip) return;
+					if (!currentUser) { openAuth(); return; }
+					const group = chip.dataset.group;
+					const profile = getProfile();
+					const focus = new Set(Array.isArray(profile.weeklyFocus) ? profile.weeklyFocus : []);
+					if (focus.has(group)) focus.delete(group); else focus.add(group);
+					profile.weeklyFocus = [...focus];
+					try {
+						if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); currentProfile = result.profile; }
+						else localStorage.setItem(profileKey(), JSON.stringify(profile));
+						renderFocusPicker();
+						renderTrainingPlan();
+					} catch (error) { handleApiError(error); }
+				});
+			}
+			const activeFocus = new Set(Array.isArray(getProfile().weeklyFocus) ? getProfile().weeklyFocus : []);
+			picker.querySelectorAll('.focus-chip').forEach(chip => chip.classList.toggle('active', activeFocus.has(chip.dataset.group)));
+		}
+		function renderTrainingPlan() {
+			const list = document.getElementById('training-plan');
+			if (!list) return;
+			if (!currentUser) { list.innerHTML = '<div class="empty-state">Logga in och välj fokusområden ovan för att få övningsförslag.</div>'; return; }
+			const focus = Array.isArray(getProfile().weeklyFocus) ? getProfile().weeklyFocus : [];
+			if (!focus.length) { list.innerHTML = '<div class="empty-state">Välj minst ett fokusområde ovan, så ger vi dig förslag på övningar.</div>'; return; }
+			const byGroup = new Map();
+			workouts.forEach(workout => {
+				const group = String(workout.muscle_group || '').trim();
+				const exercise = String(workout.exercise || '').trim();
+				if (!group || !exercise) return;
+				const groupEntries = byGroup.get(group) || new Map();
+				const key = exercise.toLocaleLowerCase('sv-SE');
+				const current = groupEntries.get(key) || { name: exercise, count: 0, lastDate: '' };
+				current.count += 1;
+				if (workout.date && workout.date > current.lastDate) current.lastDate = workout.date;
+				groupEntries.set(key, current);
+				byGroup.set(group, groupEntries);
+			});
+			list.innerHTML = focus.map(group => {
+				const entries = [...(byGroup.get(group) || new Map()).values()];
+				if (entries.length) {
+					const leastRecent = entries.sort((a, b) => (a.lastDate || '').localeCompare(b.lastDate || ''))[0];
+					const daysSince = leastRecent.lastDate ? Math.floor((new Date().setHours(12, 0, 0, 0) - new Date(`${leastRecent.lastDate}T12:00:00`).getTime()) / 86400000) : null;
+					return '<li><div><strong>' + group + '</strong><small>' + (daysSince === 0 ? 'Tränad idag – variera med en annan övning' : daysSince ? daysSince + ' dagar sedan senast' : 'Inte loggad tidigare') + '</small></div><span class="plan-badge">' + leastRecent.name + '</span></li>';
+				}
+				const suggestionList = exerciseSuggestions[group] || ['Valfri övning'];
+				const dayIndex = Math.floor(Date.now() / 86400000);
+				const suggestion = suggestionList[dayIndex % suggestionList.length];
+				return '<li><div><strong>' + group + '</strong><small>Ingen övning loggad ännu – prova något nytt</small></div><span class="plan-badge">' + suggestion + '</span></li>';
+			}).join('');
 		}
 		function renderProgressCharts() {
 			const weekChart = document.getElementById('weekly-workout-chart');
@@ -686,6 +783,8 @@
 		}
 		function render() {
 			renderExerciseMedals();
+			renderPRList();
+			renderTrainingPlan();
 			renderProgressCharts();
 			renderWorkoutHistory();
 			const sorted = [...measurements].sort((a, b) => new Date(a.date) - new Date(b.date));
