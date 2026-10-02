@@ -2,7 +2,17 @@
 
 Hälsotracker med Node.js, Express och PostgreSQL. Körs som Docker-containrar och passar en Proxmox-VM eller LXC med Docker.
 
-## Starta på egen server
+## Snabbinstallation med skript
+
+Kör på Docker-servern (den klonar repot, skapar `.env` med genererade lösenord och startar containrarna):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/richardstenlund/formkurva/main/install.sh | bash
+```
+
+Skriptet frågar efter admin-e-post, adminlösenord och adressen sidan ska nås på (t.ex. `http://192.168.1.61:3000`). Kör samma kommando igen senare för att uppdatera och bygga om containrarna.
+
+## Starta på egen server manuellt
 
 1. Installera Docker Engine och Docker Compose på en liten Debian/Ubuntu-VM i Proxmox.
 2. Kopiera projektmappen till servern.
