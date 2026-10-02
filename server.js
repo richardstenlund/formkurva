@@ -55,10 +55,12 @@ async function initDatabase() {
     sets INTEGER NOT NULL,
     reps INTEGER NOT NULL,
     weight DECIMAL(10,2) NOT NULL DEFAULT 0,
+    set_details_json TEXT NOT NULL DEFAULT '[]',
     notes VARCHAR(500) NOT NULL DEFAULT '',
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   )`);
   await pool.query('ALTER TABLE workouts ADD COLUMN IF NOT EXISTS workout_time TIME');
+  await pool.query("ALTER TABLE workouts ADD COLUMN IF NOT EXISTS set_details_json TEXT NOT NULL DEFAULT '[]'");
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_workouts_user_date ON workouts (user_id, date)`);
   await pool.query(`CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id SERIAL PRIMARY KEY,
@@ -306,26 +308,42 @@ app.delete('/api/measurements/:id', requireUser, async (req, res, next) => {
 });
 app.get('/api/workouts', requireUser, async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT id, date, workout_time, exercise, muscle_group, sets, reps, weight, notes FROM workouts WHERE user_id = $1 ORDER BY date DESC, workout_time DESC NULLS LAST', [req.user.id]);
-    res.json({ workouts: rows.map(row => ({ ...row, date: row.date.toISOString ? row.date.toISOString().slice(0, 10) : String(row.date) })) });
+    const { rows } = await pool.query('SELECT id, date, workout_time, exercise, muscle_group, sets, reps, weight, set_details_json, notes FROM workouts WHERE user_id = $1 ORDER BY date DESC, workout_time DESC NULLS LAST', [req.user.id]);
+    res.json({ workouts: rows.map(row => {
+      const { set_details_json, ...workout } = row;
+      let set_details = [];
+      try { set_details = JSON.parse(set_details_json || '[]'); } catch (error) { console.error('Kunde inte läsa set-detaljer för träningspass', row.id, error); }
+      return { ...workout, date: row.date.toISOString ? row.date.toISOString().slice(0, 10) : String(row.date), weight: Number(row.weight), set_details };
+    }) });
   } catch (error) { next(error); }
 });
 app.post('/api/workouts', requireUser, async (req, res, next) => {
   try {
     const data = req.body || {};
-    if (!data.date || !data.exercise || Number(data.sets) < 1 || Number(data.reps) < 1 || Number(data.weight) < 0 || (data.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(data.time))) return res.status(400).json({ error: 'Fyll i giltigt datum, tid, övning, set, reps och vikt.' });
+    const providedSets = data.set_details;
+    const fallbackSets = Number(data.sets);
+    if (providedSets !== undefined && (!Array.isArray(providedSets) || providedSets.length < 1 || providedSets.length > 100 || providedSets.some(set => !set || !Number.isInteger(Number(set.reps)) || Number(set.reps) < 1 || Number(set.reps) > 1000 || !Number.isFinite(Number(set.weight)) || Number(set.weight) < 0 || Number(set.weight) > 10000))) {
+      return res.status(400).json({ error: 'Varje set måste ha 1–1000 repetitioner och en giltig vikt.' });
+    }
+    const set_details = providedSets
+      ? providedSets.map(set => ({ reps: Number(set.reps), weight: Number(set.weight) }))
+      : Number.isInteger(fallbackSets) && fallbackSets > 0 && fallbackSets <= 100 && Number.isInteger(Number(data.reps)) && Number(data.reps) > 0 && Number(data.reps) <= 1000 && Number.isFinite(Number(data.weight)) && Number(data.weight) >= 0 && Number(data.weight) <= 10000
+        ? Array.from({ length: fallbackSets }, () => ({ reps: Number(data.reps), weight: Number(data.weight) }))
+        : [];
+    if (!data.date || !data.exercise || !set_details.length || (data.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(data.time))) return res.status(400).json({ error: 'Fyll i giltigt datum, tid, övning och minst ett giltigt set.' });
     const workout = {
       id: crypto.randomUUID(),
       date: String(data.date),
       workout_time: data.time ? `${data.time}:00` : null,
       exercise: String(data.exercise).slice(0, 100),
       muscle_group: String(data.muscleGroup || 'Annat').slice(0, 50),
-      sets: Number(data.sets),
-      reps: Number(data.reps),
-      weight: Number(data.weight),
+      sets: set_details.length,
+      reps: Math.max(...set_details.map(set => set.reps)),
+      weight: Math.max(...set_details.map(set => set.weight)),
+      set_details,
       notes: String(data.notes || '').slice(0, 500)
     };
-    await pool.query('INSERT INTO workouts (id, user_id, date, workout_time, exercise, muscle_group, sets, reps, weight, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)', [workout.id, req.user.id, workout.date, workout.workout_time, workout.exercise, workout.muscle_group, workout.sets, workout.reps, workout.weight, workout.notes]);
+    await pool.query('INSERT INTO workouts (id, user_id, date, workout_time, exercise, muscle_group, sets, reps, weight, set_details_json, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)', [workout.id, req.user.id, workout.date, workout.workout_time, workout.exercise, workout.muscle_group, workout.sets, workout.reps, workout.weight, JSON.stringify(set_details), workout.notes]);
     res.status(201).json(workout);
   } catch (error) { next(error); }
 });

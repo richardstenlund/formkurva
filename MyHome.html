@@ -49,6 +49,31 @@
 		.quick-repeat-label { color: var(--muted); font-size: 11px; font-weight: 600; }
 		.quick-repeat-chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--green); font-size: 11px; font-weight: 700; cursor: pointer; }
 		.quick-repeat-chip:hover { border-color: var(--green); }
+		.set-editor { display: grid; gap: 8px; }
+		.set-editor-heading { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 11px; font-weight: 700; }
+		.set-editor-heading button { padding: 6px 9px; border: 1px solid var(--line); border-radius: 7px; background: white; color: var(--green); font-size: 11px; font-weight: 700; cursor: pointer; }
+		.set-entry { display: grid; grid-template-columns: 32px minmax(80px, 1fr) minmax(80px, 1fr) 34px; align-items: end; gap: 8px; }
+		.set-entry-number { padding-bottom: 12px; color: var(--green); font-size: 12px; font-weight: 700; text-align: center; }
+		.set-entry label { gap: 4px; }
+		.set-entry input { padding: 8px; }
+		.set-remove { width: 32px; height: 34px; border: 1px solid var(--line); border-radius: 7px; background: white; color: var(--muted); cursor: pointer; }
+		.template-controls { display: grid; gap: 9px; margin: 0 0 14px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+		.template-controls > div { display: flex; flex-wrap: wrap; gap: 8px; }
+		.template-controls input, .template-controls select { min-width: 0; flex: 1; padding: 9px; border: 1px solid var(--line); border-radius: 7px; background: white; color: var(--ink); }
+		.template-controls button { padding: 8px 11px; border: 1px solid var(--line); border-radius: 7px; background: white; color: var(--green); font-size: 11px; font-weight: 700; cursor: pointer; }
+		.template-status, .backup-status { margin: 0; color: var(--muted); font-size: 11px; }
+		.backup-status { margin-top: 12px; line-height: 1.5; }
+		.secondary-insights { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin: 0 0 24px; }
+		.suggestion-result { margin-top: 12px; padding: 12px; border-radius: 10px; background: var(--paper); color: var(--muted); font-size: 12px; line-height: 1.6; }
+		.suggestion-result strong { color: var(--green); }
+		.suggestion-result button { display: block; margin-top: 10px; padding: 8px 10px; border: 0; border-radius: 7px; background: var(--green); color: white; font-weight: 700; cursor: pointer; }
+		.recovery-list { display: grid; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+		.recovery-list li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+		.recovery-list small { color: var(--muted); text-align: right; }
+		.weight-trend { margin-top: 22px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+		.weight-trend-chart { display: block; width: 100%; height: 150px; margin-top: 10px; overflow: visible; }
+		.weight-trend-summary { color: var(--muted); font-size: 12px; }
+		.weight-trend-summary strong { color: var(--green); }
 		label { display: grid; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 600; }
 		input { width: 100%; padding: 11px 12px; border: 1px solid #d3dfd4; border-radius: 7px; outline: 0; background: white; color: var(--ink); font-size: 14px; }
 		input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(28,91,72,.12); }
@@ -201,7 +226,7 @@
 		.pr-onerepmax { color: var(--green); }
 		.plateau-warning { display: inline-flex; align-items: center; margin-top: 5px; padding: 4px 8px; border-radius: 6px; background: rgba(240,138,75,.14); color: #c15a1f; font-size: 10px; font-weight: 700; line-height: 1.4; }
 		@media (max-width: 1300px) { .dashboard-insights { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-		@media (max-width: 900px) { .dashboard-insights { grid-template-columns: 1fr; } }
+		@media (max-width: 900px) { .dashboard-insights, .secondary-insights { grid-template-columns: 1fr; } }
 		@media (max-width: 760px) { .progress-grid { grid-template-columns: 1fr; } }
 		@media (max-width: 650px) { .profile-layout { grid-template-columns: 1fr; gap: 15px; } .profile-identity { display: grid; grid-template-columns: auto 1fr; column-gap: 15px; } .profile-avatar-large { grid-row: span 2; } }
 		@media (max-width: 900px) { .app-shell { grid-template-columns: 1fr; } .sidebar { padding: 16px 20px; } .brand { padding: 0 0 15px; } nav { display: flex; overflow-x: auto; } .nav-label, .sidebar-bottom { display: none; } .nav-item { white-space: nowrap; } main { padding: 28px 18px; } .stats { grid-template-columns: 1fr 1fr; } .content-grid, .feature-grid { grid-template-columns: 1fr; } .history { grid-column: auto; } }
@@ -275,11 +300,27 @@
 				</article>
 			</section>
 
+			<section class="secondary-insights" data-view="oversikt">
+				<article class="panel">
+					<div class="panel-heading"><div><h2>Förslag till nästa pass</h2><p class="panel-subtitle">Ett försiktigt, valfritt steg baserat på ditt senaste pass.</p></div></div>
+					<div id="next-workout-suggestion" class="suggestion-result"></div>
+				</article>
+				<article class="panel">
+					<div class="panel-heading"><div><h2>Träningsbalans</h2><p class="panel-subtitle">Senaste aktivitet per muskelgrupp – historik, inte återhämtningsråd.</p></div></div>
+					<ul class="recovery-list" id="recovery-balance"></ul>
+				</article>
+			</section>
+
 			<section class="panel progress-panel" id="progress" data-view="oversikt">
 				<div class="panel-heading"><div><h2>Din träning & kroppsutveckling</h2><p class="panel-subtitle">Följ antal aktiva dagar per vecka och förändringar i dina mått.</p></div></div>
 				<div class="progress-grid">
 					<div><h3>Träningsdagar · senaste 12 veckorna</h3><p class="panel-subtitle">Antal dagar med minst ett loggat pass per vecka.</p><div class="progress-chart" id="weekly-workout-chart" role="img" aria-label="Träningsdagar per vecka"></div></div>
 					<div><div class="panel-heading"><div><h3>Kroppens utveckling</h3><p class="panel-subtitle">Välj ett mått för att se din historik.</p></div><label class="chart-metric-label">Mått<select id="body-progress-metric"><option value="weight">Vikt (kg)</option><option value="waist">Midja (cm)</option><option value="chest">Bröst (cm)</option><option value="arm">Överarm (cm)</option><option value="thigh">Lår (cm)</option><option value="hip">Höft (cm)</option></select></label></div><svg class="body-chart" id="body-progress-chart" viewBox="0 0 600 180" role="img" aria-label="Diagram över kroppens utveckling"></svg><p class="chart-empty" id="body-progress-empty" hidden></p></div>
+				</div>
+				<div class="weight-trend">
+					<div class="panel-heading"><div><h3>Vikttrend · veckomedel</h3><p class="panel-subtitle">Genomsnittet per kalendervecka jämnar ut dagliga variationer.</p></div></div>
+					<p class="weight-trend-summary" id="weight-trend-summary"></p>
+					<svg class="weight-trend-chart" id="weight-trend-chart" viewBox="0 0 600 150" role="img" aria-label="Kroppsviktens veckomedel"></svg>
 				</div>
 				<div class="heatmap-block"><h3>Träningskalender · senaste 10 veckorna</h3><p class="panel-subtitle">Varje ruta är en dag – mörkare grönt betyder fler loggade övningar.</p><div class="training-heatmap" id="training-heatmap" role="img" aria-label="Träningskalender"></div></div>
 			</section>
@@ -483,11 +524,13 @@
 				const exercise = String(workout.exercise || '').trim();
 				if (!exercise) return;
 				const key = exercise.toLocaleLowerCase('sv-SE');
-				const weight = Number(workout.weight) || 0;
-				const reps = Number(workout.reps) || 0;
+				const details = getWorkoutSetDetails(workout);
+				const weight = Math.max(...details.map(set => Number(set.weight) || 0));
+				const reps = Number(details.find(set => Number(set.weight) === weight)?.reps) || 0;
+				const oneRepMax = Math.max(...details.map(set => estimateOneRepMax(Number(set.weight), Number(set.reps))));
 				const entries = exerciseMap.get(key) || { name: exercise, entries: [] };
 				entries.name = exercise;
-				entries.entries.push({ date: workout.date || '', time: workout.workout_time || '', weight, reps, oneRepMax: estimateOneRepMax(weight, reps) });
+				entries.entries.push({ date: workout.date || '', time: workout.workout_time || '', weight, reps, oneRepMax });
 				exerciseMap.set(key, entries);
 			});
 			const items = [...exerciseMap.values()].map(group => {
@@ -504,6 +547,11 @@
 			list.innerHTML = items.length ? items.map(item => '<li><div><strong>' + item.name + '</strong><small>' + item.sessions + ' pass loggade' + (item.lastDate ? ' · senast ' + new Date(item.lastDate + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }) : '') + '</small>' + (item.oneRepMax > 0 ? '<small class="pr-onerepmax">Uppskattat 1RM: ' + formatNumber(item.oneRepMax, 'kg') + '</small>' : '') + (item.isPlateau ? '<small class="plateau-warning">⚠ Ingen ny toppnotering på ' + plateauThreshold + '+ pass – dags att variera eller öka volymen?</small>' : '') + '</div><span class="pr-value">' + formatNumber(item.weight, 'kg') + ' × ' + item.reps + '</span></li>').join('') : '<div class="empty-state">Logga ett träningspass för att se dina personbästa här.</div>';
 		}
 		function estimateOneRepMax(weight, reps) { return weight > 0 && reps > 0 ? weight * (1 + reps / 30) : 0; }
+		function getWorkoutSetDetails(workout) {
+			return Array.isArray(workout.set_details) && workout.set_details.length
+				? workout.set_details
+				: Array.from({ length: Number(workout.sets) || 1 }, () => ({ reps: Number(workout.reps) || 0, weight: Number(workout.weight) || 0 }));
+		}
 		const focusGroups = ['Bröst', 'Rygg', 'Ben', 'Axlar', 'Armar', 'Rumpa', 'Mage', 'Helkropp'];
 		const exerciseSuggestions = {
 			'Bröst': ['Bänkpress', 'Hantelpress', 'Dips'],
@@ -679,11 +727,11 @@
 			const mondayStr = dateToInput(monday);
 			const weekWorkouts = workouts.filter(item => String(item.date).slice(0, 10) >= mondayStr);
 			const daysThisWeek = new Set(weekWorkouts.map(item => String(item.date).slice(0, 10))).size;
-			const volume = weekWorkouts.reduce((sum, item) => sum + (Number(item.sets) || 0) * (Number(item.reps) || 0) * (Number(item.weight) || 0), 0);
+			const volume = weekWorkouts.reduce((sum, item) => sum + getWorkoutSetDetails(item).reduce((setSum, set) => setSum + (Number(set.reps) || 0) * (Number(set.weight) || 0), 0), 0);
 			const prCount = weekWorkouts.reduce((count, item) => {
 				const key = String(item.exercise || '').trim().toLocaleLowerCase('sv-SE');
-				const bestBefore = Math.max(0, ...workouts.filter(w => String(w.exercise || '').trim().toLocaleLowerCase('sv-SE') === key && String(w.date).slice(0, 10) < mondayStr).map(w => estimateOneRepMax(Number(w.weight), Number(w.reps)) || 0));
-				const thisOne = estimateOneRepMax(Number(item.weight), Number(item.reps)) || 0;
+				const bestBefore = Math.max(0, ...workouts.filter(w => String(w.exercise || '').trim().toLocaleLowerCase('sv-SE') === key && String(w.date).slice(0, 10) < mondayStr).map(w => Math.max(...getWorkoutSetDetails(w).map(set => estimateOneRepMax(Number(set.weight), Number(set.reps))))));
+				const thisOne = Math.max(...getWorkoutSetDetails(item).map(set => estimateOneRepMax(Number(set.weight), Number(set.reps))));
 				return thisOne > bestBefore && thisOne > 0 ? count + 1 : count;
 			}, 0);
 			summaryGrid.innerHTML = `<div class="week-summary-item"><strong>${daysThisWeek}</strong><span>Träningsdagar</span></div><div class="week-summary-item"><strong>${Math.round(volume)}</strong><span>kg volym</span></div><div class="week-summary-item"><strong>${prCount}</strong><span>Nya PR</span></div>`;
@@ -724,6 +772,122 @@
 				cell.title = `${date.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })} · ${count} loggade övningar`;
 				return cell;
 			}));
+		}
+		function renderNextWorkoutSuggestion() {
+			const container = document.getElementById('next-workout-suggestion');
+			if (!container) return;
+			container.replaceChildren();
+			const lastWorkout = [...workouts].sort((a, b) => new Date(b.date + 'T' + (b.workout_time || '00:00:00')) - new Date(a.date + 'T' + (a.workout_time || '00:00:00')))[0];
+			if (!lastWorkout) { container.textContent = 'Logga en övning så kan sidan visa ditt senaste resultat här.'; return; }
+			const previous = getWorkoutSetDetails(lastWorkout);
+			const highestReps = Math.max(...previous.map(set => Number(set.reps) || 0));
+			const canAddWeight = highestReps >= 12 && previous.every(set => Number(set.weight) > 0);
+			const suggestedSets = previous.map(set => canAddWeight
+				? { reps: 8, weight: Math.round((Number(set.weight) + 2.5) * 2) / 2 }
+				: { reps: Math.min(1000, Number(set.reps) + 1), weight: Number(set.weight) || 0 });
+			const summary = document.createElement('span');
+			const exerciseName = document.createElement('strong');
+			exerciseName.textContent = lastWorkout.exercise;
+			const previousLine = document.createElement('span');
+			previousLine.textContent = `Senast: ${previous.map(set => `${set.weight} kg × ${set.reps}`).join(' · ')}`;
+			const nextLine = document.createElement('span');
+			nextLine.textContent = `Förslag: ${suggestedSets.map(set => `${set.weight} kg × ${set.reps}`).join(' · ')}`;
+			summary.append(exerciseName, document.createElement('br'), previousLine, document.createElement('br'), nextLine);
+			const button = document.createElement('button');
+			button.type = 'button'; button.textContent = 'Använd förslaget i träningsloggen';
+			button.addEventListener('click', () => {
+				showView('logga');
+				fillWorkoutForm({ ...lastWorkout, set_details: suggestedSets });
+				document.getElementById('new-workout').scrollIntoView({ behavior: 'smooth' });
+				showToast('Förslaget är ifyllt. Anpassa det efter dagsformen innan du sparar.');
+			});
+			container.append(summary, button);
+		}
+		function renderRecoveryBalance() {
+			const list = document.getElementById('recovery-balance');
+			if (!list) return;
+			const groups = new Map();
+			const today = new Date();
+			today.setHours(12, 0, 0, 0);
+			const sevenDaysAgo = new Date(today);
+			sevenDaysAgo.setDate(today.getDate() - 6);
+			workouts.forEach(workout => {
+				const group = String(workout.muscle_group || 'Annat').trim() || 'Annat';
+				const date = String(workout.date || '').slice(0, 10);
+				if (!date) return;
+				const entry = groups.get(group) || { dates: new Set(), lastDate: '' };
+				entry.dates.add(date);
+				if (date > entry.lastDate) entry.lastDate = date;
+				groups.set(group, entry);
+			});
+			const recentGroups = [...groups.entries()].sort((a, b) => b[1].lastDate.localeCompare(a[1].lastDate));
+			if (!recentGroups.length) {
+				list.innerHTML = '<li><span>Ingen träningsdata ännu</span><small>Logga en övning för att börja</small></li>';
+				return;
+			}
+			list.replaceChildren(...recentGroups.map(([group, entry]) => {
+				const recentCount = [...entry.dates].filter(date => {
+					const activityDate = new Date(`${date}T12:00:00`);
+					return activityDate >= sevenDaysAgo && activityDate <= today;
+				}).length;
+				const daysAgo = Math.max(0, Math.floor((today.getTime() - new Date(`${entry.lastDate}T12:00:00`).getTime()) / 86400000));
+				const item = document.createElement('li');
+				const name = document.createElement('strong');
+				name.textContent = group;
+				const detail = document.createElement('small');
+				detail.textContent = `${recentCount} aktiva dagar senaste veckan · senast ${daysAgo === 0 ? 'idag' : `${daysAgo} dagar sedan`}`;
+				item.append(name, detail);
+				return item;
+			}));
+		}
+		function renderWeeklyWeightTrend() {
+			const chart = document.getElementById('weight-trend-chart');
+			const summary = document.getElementById('weight-trend-summary');
+			if (!chart || !summary) return;
+			chart.replaceChildren();
+			const weekly = new Map();
+			measurements.forEach(item => {
+				const value = Number(item.weight);
+				if (!item.date || item.weight === '' || !Number.isFinite(value) || value <= 0) return;
+				const dateParts = String(item.date).slice(0, 10).split('-').map(Number);
+				const date = new Date(dateParts[0], dateParts[1] - 1, dateParts[2], 12);
+				date.setDate(date.getDate() - (date.getDay() + 6) % 7);
+				const key = dateToInput(date);
+				const group = weekly.get(key) || { start: date, total: 0, count: 0 };
+				group.total += value; group.count += 1;
+				weekly.set(key, group);
+			});
+			const points = [...weekly.entries()].map(([key, value]) => ({ key, start: value.start, average: value.total / value.count })).sort((a, b) => a.key.localeCompare(b.key)).slice(-12);
+			if (!points.length) {
+				summary.textContent = 'Spara kroppsvikt i dina mätningar för att se veckomedel.';
+				return;
+			}
+			const latest = points.at(-1);
+			const previous = points.at(-2);
+			summary.innerHTML = `Veckans medel: <strong>${formatNumber(latest.average, 'kg')}</strong>${previous ? ` · föregående vecka: ${formatNumber(previous.average, 'kg')}` : ''}`;
+			const ns = 'http://www.w3.org/2000/svg';
+			const values = points.map(point => point.average);
+			const min = Math.min(...values), max = Math.max(...values);
+			const padding = Math.max((max - min) * 0.18, Math.abs(max) * 0.01, 0.3);
+			const x = index => points.length === 1 ? 300 : 28 + index * 544 / (points.length - 1);
+			const y = value => 112 - (value - min + padding) / (max - min + 2 * padding) * 82;
+			const line = document.createElementNS(ns, 'polyline');
+			line.setAttribute('points', points.map((point, index) => `${x(index)},${y(point.average)}`).join(' '));
+			line.setAttribute('fill', 'none'); line.setAttribute('stroke', 'var(--green)'); line.setAttribute('stroke-width', '3'); line.setAttribute('stroke-linecap', 'round'); line.setAttribute('stroke-linejoin', 'round');
+			chart.append(line);
+			points.forEach((point, index) => {
+				const dot = document.createElementNS(ns, 'circle');
+				dot.setAttribute('cx', String(x(index))); dot.setAttribute('cy', String(y(point.average))); dot.setAttribute('r', '4'); dot.setAttribute('fill', index === points.length - 1 ? 'var(--orange)' : 'var(--green)');
+				const title = document.createElementNS(ns, 'title');
+				title.textContent = `${point.start.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}: ${formatNumber(point.average, 'kg')}`;
+				dot.append(title); chart.append(dot);
+				if (index === 0 || index === points.length - 1) {
+					const label = document.createElementNS(ns, 'text');
+					label.setAttribute('x', String(x(index))); label.setAttribute('y', '140'); label.setAttribute('fill', 'var(--muted)'); label.setAttribute('font-size', '10'); label.setAttribute('text-anchor', index === 0 ? 'start' : 'end');
+					label.textContent = point.start.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' });
+					chart.append(label);
+				}
+			});
 		}
 		function updateWorkoutReminderStatus() {
 			const profile = getProfile();
@@ -794,6 +958,7 @@
 			document.getElementById('user-avatar').textContent = displayName ? displayName[0].toUpperCase() : '';
 			document.getElementById('admin-nav').style.display = currentRole === 'admin' ? 'flex' : 'none';
 			document.getElementById('admin').style.display = currentRole === 'admin' ? 'block' : 'none';
+			renderBackupStatus();
 		}
 		function showView(view) {
 			document.querySelectorAll('[data-view]').forEach(el => { el.classList.toggle('view-hidden', el.dataset.view !== view); });
@@ -847,7 +1012,7 @@
 				resetError.textContent = error.message;
 			}
 		});
-		profileForm.addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(true); return; } const profile = Object.fromEntries(new FormData(profileForm)); delete profile.email; try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); currentProfile = result.profile; } else localStorage.setItem(profileKey(), JSON.stringify(profile)); updateAccountUi(); applyTheme(); renderProfile(); renderHealth(); renderGoal(); showToast('Profilen är uppdaterad.'); } catch (error) { handleApiError(error); } });
+		profileForm.addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(true); return; } const profile = { ...getProfile(), ...Object.fromEntries(new FormData(profileForm)) }; delete profile.email; try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); currentProfile = result.profile; } else localStorage.setItem(profileKey(), JSON.stringify(profile)); updateAccountUi(); applyTheme(); renderProfile(); renderHealth(); renderGoal(); renderWorkoutTemplates(); showToast('Profilen är uppdaterad.'); } catch (error) { handleApiError(error); } });
 		document.getElementById('goal-form').addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(true); return; } const goal = Object.fromEntries(new FormData(event.target)); const profile = getProfile(); Object.assign(profile, goal); try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); currentProfile = result.profile; } else localStorage.setItem(profileKey(), JSON.stringify(profile)); renderProfile(); renderGoal(); showToast('Målet är sparat.'); } catch (error) { handleApiError(error); } });
 		document.getElementById('reminder-form').addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(true); return; } const reminder = Object.fromEntries(new FormData(event.target)); const profile = getProfile(); Object.assign(profile, reminder); try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); currentProfile = result.profile; } else localStorage.setItem(profileKey(), JSON.stringify(profile)); renderProfile(); showToast('Påminnelsen är sparad.'); } catch (error) { handleApiError(error); } });
 		document.getElementById('workout-reminder-form').addEventListener('submit', async event => {
@@ -880,7 +1045,36 @@
 		setInterval(checkWorkoutReminder, 30000);
 		document.getElementById('note-form').addEventListener('submit', async event => { event.preventDefault(); if (!currentUser) { openAuth(true); return; } const profile = getProfile(); profile.note = document.getElementById('daily-note').value; try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); currentProfile = result.profile; } else localStorage.setItem(profileKey(), JSON.stringify(profile)); showToast('Anteckningen är sparad.'); } catch (error) { handleApiError(error); } });
 		document.getElementById('progress-photo').addEventListener('change', event => { const file = event.target.files[0]; if (!file || !currentUser) return; const reader = new FileReader(); reader.onload = async () => { const profile = getProfile(); profile.photo = reader.result; try { if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); currentProfile = result.profile; } else localStorage.setItem(profileKey(), JSON.stringify(profile)); renderProfile(); showToast('Progressbilden är sparad.'); } catch (error) { handleApiError(error); } }; reader.readAsDataURL(file); });
-		document.getElementById('export-all').addEventListener('click', () => { if (!currentUser) { openAuth(); return; } const payload = { profile: getProfile(), measurements }; const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'formkurva-all-data.json'; link.click(); URL.revokeObjectURL(link.href); showToast('All data laddades ner.'); });
+		function backupTimestampKey() { return `formkurva-last-backup-${sessionUserId || currentUser || 'guest'}`; }
+		function renderBackupStatus() {
+			let status = document.getElementById('backup-status');
+			if (!status) {
+				status = document.createElement('p');
+				status.id = 'backup-status'; status.className = 'backup-status';
+				document.querySelector('.privacy-list').after(status);
+				document.getElementById('export-all').textContent = 'Ladda ner säkerhetskopia';
+			}
+			try {
+				const last = localStorage.getItem(backupTimestampKey());
+				status.textContent = last
+					? `Senaste exporten startades ${new Date(last).toLocaleString('sv-SE')} i den här webbläsaren. Kontrollera att filen sparats.`
+					: 'Ingen säkerhetskopia har startats från den här webbläsaren ännu.';
+			} catch (error) { status.textContent = `Exporthistoriken kunde inte läsas: ${error.message}`; }
+		}
+		document.getElementById('export-all').addEventListener('click', () => {
+			if (!currentUser) { openAuth(); return; }
+			const timestamp = new Date().toISOString();
+			const payload = { format: 'formkurva-backup', version: 1, exportedAt: timestamp, account: currentUser, profile: getProfile(), measurements, workouts };
+			const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+			const url = URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = url; link.download = `formkurva-sakerhetskopia-${dateToInput(new Date())}.json`;
+			document.body.append(link); link.click(); link.remove();
+			window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+			try { localStorage.setItem(backupTimestampKey(), timestamp); renderBackupStatus(); }
+			catch (error) { showToast(`Filen skapades, men statusen kunde inte sparas: ${error.message}`); return; }
+			showToast('Säkerhetskopian skapades. Kontrollera att den sparats i nedladdningarna.');
+		});
 		document.getElementById('delete-data').addEventListener('click', async () => { if (!currentUser) { openAuth(); return; } if (!confirm('Vill du radera alla dina mätningar och profiluppgifter?')) return; try { if (serverMode) await api('/account', { method: 'DELETE' }); else { localStorage.removeItem(storageKey()); localStorage.removeItem(profileKey()); } currentUser = ''; currentProfile = {}; sessionUserId = ''; currentRole = ''; measurements = []; workouts = []; updateAccountUi(); applyTheme(); renderProfile(); render(); renderGoal(); renderHealth(); showToast('Din data är raderad.'); } catch (error) { handleApiError(error); } });
 		document.getElementById('chart-metric')?.addEventListener('change', event => { currentMetric = event.target.value; render(); });
 		document.getElementById('body-progress-metric').addEventListener('change', renderProgressCharts);
@@ -911,7 +1105,11 @@
 			renderProgressCharts();
 			renderLevelAndWeekSummary();
 			renderTrainingHeatmap();
+			renderNextWorkoutSuggestion();
+			renderRecoveryBalance();
+			renderWeeklyWeightTrend();
 			renderWorkoutHistory();
+			renderWorkoutTemplates();
 			const sorted = [...measurements].sort((a, b) => new Date(a.date) - new Date(b.date));
 			const metricSelector = document.getElementById('chart-metric');
 			const chartTitle = metricSelector?.selectedOptions?.[0]?.textContent || ({ weight: 'Vikt', waist: 'Midja', chest: 'Bröst', arm: 'Överarm', thigh: 'Lår', hip: 'Höft' }[currentMetric] || 'Vikt');
@@ -944,20 +1142,200 @@
 			const container = document.getElementById('workout-history-content');
 			if (!container) return;
 			const sortedWorkouts = [...workouts].sort((a, b) => new Date(b.date + 'T' + (b.workout_time || '00:00:00')) - new Date(a.date + 'T' + (a.workout_time || '00:00:00')));
-			container.innerHTML = sortedWorkouts.length ? '<table class="history-table"><thead><tr><th>Datum</th><th>Övning</th><th>Muskelgrupp</th><th>Set × reps</th><th>Vikt</th><th></th></tr></thead><tbody>' + sortedWorkouts.map(item => '<tr><td>' + new Date(item.date + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' }) + (item.workout_time ? ' ' + item.workout_time.slice(0, 5) : '') + '</td><td>' + item.exercise + '</td><td>' + item.muscle_group + '</td><td>' + item.sets + ' × ' + item.reps + '</td><td>' + formatNumber(item.weight, 'kg') + '</td><td><button class="delete-button" aria-label="Ta bort träningspass" onclick="removeWorkout(\'' + item.id + '\')">×</button></td></tr>').join('') + '</tbody></table>' : '<div class="empty-state">Dina träningspass visas här när du loggat ditt första.<br><button class="account-button primary" type="button" onclick="document.getElementById(\'new-workout\').scrollIntoView({behavior:\'smooth\'})">Logga ditt första pass →</button></div>';
+			container.innerHTML = sortedWorkouts.length ? '<table class="history-table"><thead><tr><th>Datum</th><th>Övning</th><th>Muskelgrupp</th><th>Set</th><th>Vikt</th><th></th></tr></thead><tbody>' + sortedWorkouts.map(item => {
+				const details = getWorkoutSetDetails(item);
+				const reps = details.map(set => set.reps).join('/');
+				const weights = [...new Set(details.map(set => Number(set.weight)))].map(value => formatNumber(value, 'kg')).join(' / ');
+				return '<tr><td>' + new Date(item.date + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' }) + (item.workout_time ? ' ' + item.workout_time.slice(0, 5) : '') + '</td><td>' + item.exercise + '</td><td>' + item.muscle_group + '</td><td>' + details.length + ' × ' + reps + ' reps</td><td>' + weights + '</td><td><button class="delete-button" aria-label="Ta bort träningspass" onclick="removeWorkout(\'' + item.id + '\')">×</button></td></tr>';
+			}).join('') + '</tbody></table>' : '<div class="empty-state">Dina träningspass visas här när du loggat ditt första.<br><button class="account-button primary" type="button" onclick="document.getElementById(\'new-workout\').scrollIntoView({behavior:\'smooth\'})">Logga ditt första pass →</button></div>';
+		}
+		let activeWorkoutTemplateId = '';
+		let activeWorkoutTemplateIndex = 0;
+		function workoutTemplates() { const templates = getProfile().workoutTemplates; return Array.isArray(templates) ? templates.filter(template => template && typeof template.id === 'string' && typeof template.name === 'string' && Array.isArray(template.exercises)).map(template => ({ ...template, exercises: template.exercises.filter(exercise => exercise && typeof exercise.exercise === 'string') })) : []; }
+		function currentSetDetails() {
+			return [...document.querySelectorAll('#set-entries .set-entry')].map(row => ({
+				reps: Number(row.querySelector('[data-set-reps]').value),
+				weight: Number(row.querySelector('[data-set-weight]').value)
+			}));
+		}
+		function setWorkoutDetails(details) {
+			const list = document.getElementById('set-entries');
+			if (!list) return;
+			list.replaceChildren();
+			(details.length ? details : [{ reps: 8, weight: 0 }]).forEach(detail => list.append(createSetEntry(detail.reps, detail.weight)));
+			updateSetEntryNumbers();
+		}
+		function createSetEntry(reps = 8, weight = 0) {
+			const row = document.createElement('div');
+			row.className = 'set-entry';
+			const number = document.createElement('span');
+			number.className = 'set-entry-number';
+			const repsLabel = document.createElement('label');
+			repsLabel.textContent = 'Reps';
+			const repsInput = document.createElement('input');
+			repsInput.type = 'number'; repsInput.min = '1'; repsInput.max = '1000'; repsInput.step = '1'; repsInput.required = true; repsInput.value = String(reps); repsInput.dataset.setReps = '';
+			repsLabel.append(repsInput);
+			const weightLabel = document.createElement('label');
+			weightLabel.textContent = 'Vikt (kg)';
+			const weightInput = document.createElement('input');
+			weightInput.type = 'number'; weightInput.min = '0'; weightInput.max = '10000'; weightInput.step = '0.5'; weightInput.required = true; weightInput.value = String(weight); weightInput.dataset.setWeight = '';
+			weightLabel.append(weightInput);
+			const remove = document.createElement('button');
+			remove.type = 'button'; remove.className = 'set-remove'; remove.textContent = '×'; remove.setAttribute('aria-label', 'Ta bort set');
+			remove.addEventListener('click', () => { if (document.querySelectorAll('#set-entries .set-entry').length > 1) { row.remove(); updateSetEntryNumbers(); } });
+			row.append(number, repsLabel, weightLabel, remove);
+			return row;
+		}
+		function updateSetEntryNumbers() {
+			const rows = [...document.querySelectorAll('#set-entries .set-entry')];
+			rows.forEach((row, index) => {
+				row.querySelector('.set-entry-number').textContent = String(index + 1);
+				row.querySelector('.set-remove').disabled = rows.length === 1;
+			});
+			document.getElementById('add-workout-set').disabled = rows.length >= 100;
+		}
+		function fillWorkoutForm(workout) {
+			workoutForm.elements.namedItem('exercise').value = workout.exercise || '';
+			const details = Array.isArray(workout.set_details) && workout.set_details.length
+				? workout.set_details
+				: Array.from({ length: Number(workout.sets) || 1 }, () => ({ reps: Number(workout.reps) || 8, weight: Number(workout.weight) || 0 }));
+			setWorkoutDetails(details);
+			const muscleField = workoutForm.elements.namedItem('muscleGroup');
+			if (muscleField) muscleField.value = workout.muscle_group || 'Annat';
+			document.getElementById('workout-advanced').open = true;
+		}
+		function renderWorkoutTemplates() {
+			const select = document.getElementById('workout-template-select');
+			const status = document.getElementById('workout-template-status');
+			if (!select || !status) return;
+			const templates = workoutTemplates();
+			const selected = select.value;
+			select.replaceChildren(new Option('Välj sparad mall', ''));
+			templates.forEach(template => select.add(new Option(`${template.name} (${template.exercises.length} övningar)`, template.id)));
+			if (templates.some(template => template.id === selected)) select.value = selected;
+			let active = templates.find(template => template.id === activeWorkoutTemplateId);
+			if (activeWorkoutTemplateId && !active) { activeWorkoutTemplateId = ''; activeWorkoutTemplateIndex = 0; }
+			status.textContent = active
+				? `Aktiv mall: ${active.name} · övning ${activeWorkoutTemplateIndex + 1} av ${active.exercises.length}`
+				: templates.length ? `${templates.length} sparad mall${templates.length === 1 ? '' : 'ar'}.` : 'Spara en övning som mall och bygg vidare med fler övningar.';
+			document.getElementById('start-workout-template').textContent = activeWorkoutTemplateId ? 'Avsluta mall' : 'Starta vald mall';
+			document.getElementById('add-exercise-to-template').disabled = !select.value;
+		}
+		async function saveWorkoutTemplates(templates) {
+			if (!currentUser) { openAuth(); return false; }
+			const profile = { ...getProfile(), workoutTemplates: templates };
+			try {
+				if (serverMode) { const result = await api('/profile', { method: 'PUT', body: JSON.stringify(profile) }); currentProfile = result.profile; }
+				else localStorage.setItem(profileKey(), JSON.stringify(profile));
+				renderWorkoutTemplates();
+				showToast('Träningsmallen är sparad.');
+				return true;
+			} catch (error) { handleApiError(error); return false; }
+		}
+		function templateExerciseFromForm() {
+			const exercise = String(workoutForm.elements.namedItem('exercise').value || '').trim();
+			if (!exercise) { showToast('Skriv in en övning först.'); return null; }
+			return {
+				exercise,
+				muscle_group: workoutForm.elements.namedItem('muscleGroup').value || 'Annat',
+				set_details: currentSetDetails()
+			};
+		}
+		async function createWorkoutTemplate() {
+			const exercise = templateExerciseFromForm();
+			if (!exercise) return;
+			const name = document.getElementById('workout-template-name').value.trim() || exercise.exercise;
+			const templates = workoutTemplates().map(template => ({ ...template, exercises: [...template.exercises] }));
+			const template = { id: `template-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name, exercises: [exercise] };
+			templates.push(template);
+			if (await saveWorkoutTemplates(templates)) {
+				document.getElementById('workout-template-name').value = '';
+				document.getElementById('workout-template-select').value = template.id;
+				renderWorkoutTemplates();
+			}
+		}
+		async function addExerciseToWorkoutTemplate() {
+			const exercise = templateExerciseFromForm();
+			if (!exercise) return;
+			const selectedId = document.getElementById('workout-template-select').value;
+			const templates = workoutTemplates().map(template => ({ ...template, exercises: [...template.exercises] }));
+			const template = templates.find(item => item.id === selectedId);
+			if (!template) return;
+			template.exercises.push(exercise);
+			await saveWorkoutTemplates(templates);
+		}
+		function applyWorkoutTemplateExercise() {
+			const template = workoutTemplates().find(item => item.id === activeWorkoutTemplateId);
+			const exercise = template?.exercises[activeWorkoutTemplateIndex];
+			if (!exercise) { activeWorkoutTemplateId = ''; activeWorkoutTemplateIndex = 0; renderWorkoutTemplates(); return; }
+			fillWorkoutForm(exercise);
+			renderWorkoutTemplates();
+			document.getElementById('new-workout').scrollIntoView({ behavior: 'smooth' });
+		}
+		function toggleWorkoutTemplate() {
+			if (activeWorkoutTemplateId) {
+				activeWorkoutTemplateId = ''; activeWorkoutTemplateIndex = 0; renderWorkoutTemplates();
+				showToast('Mallen avslutades.');
+				return;
+			}
+			const template = workoutTemplates().find(item => item.id === document.getElementById('workout-template-select').value);
+			if (!template?.exercises?.length) { showToast('Välj eller skapa en träningsmall först.'); return; }
+			activeWorkoutTemplateId = template.id; activeWorkoutTemplateIndex = 0;
+			applyWorkoutTemplateExercise();
+			showToast(`Mallen ${template.name} startade.`);
+		}
+		function initializeWorkoutTools() {
+			const form = document.getElementById('workout-form');
+			const oldSummary = form.querySelector('.field-grid-3');
+			oldSummary.hidden = true;
+			oldSummary.querySelectorAll('input').forEach(input => { input.disabled = true; });
+			const editor = document.createElement('div');
+			editor.className = 'set-editor';
+			editor.innerHTML = '<div class="set-editor-heading"><span>Set för övningen</span><button type="button" id="add-workout-set">+ Lägg till set</button></div><div id="set-entries"></div>';
+			form.insertBefore(editor, form.querySelector('.workout-advanced'));
+			document.getElementById('add-workout-set').addEventListener('click', () => {
+				if (document.querySelectorAll('#set-entries .set-entry').length >= 100) { showToast('Ett pass kan innehålla högst 100 set.'); return; }
+				const last = currentSetDetails().at(-1) || { reps: 8, weight: 0 };
+				document.getElementById('set-entries').append(createSetEntry(last.reps, last.weight));
+				updateSetEntryNumbers();
+			});
+			setWorkoutDetails([{ reps: 8, weight: 0 }, { reps: 8, weight: 0 }, { reps: 8, weight: 0 }]);
+
+			const manager = document.createElement('div');
+			manager.className = 'template-controls';
+			manager.innerHTML = '<strong>Träningsmallar</strong><div><select id="workout-template-select" aria-label="Välj träningsmall"><option value="">Välj sparad mall</option></select><button type="button" id="start-workout-template">Starta vald mall</button></div><div><input id="workout-template-name" maxlength="60" placeholder="Namn på ny mall"><button type="button" id="create-workout-template">Spara övning som ny mall</button><button type="button" id="add-exercise-to-template">Lägg till övning i vald mall</button></div><p class="template-status" id="workout-template-status" aria-live="polite"></p>';
+			document.getElementById('new-workout').insertBefore(manager, document.getElementById('quick-repeat'));
+			document.getElementById('create-workout-template').addEventListener('click', createWorkoutTemplate);
+			document.getElementById('add-exercise-to-template').addEventListener('click', addExerciseToWorkoutTemplate);
+			document.getElementById('start-workout-template').addEventListener('click', toggleWorkoutTemplate);
+			document.getElementById('workout-template-select').addEventListener('change', renderWorkoutTemplates);
+			renderWorkoutTemplates();
 		}
 		workoutForm.addEventListener('submit', async event => {
 			event.preventDefault();
 			if (!currentUser) { openAuth(true); return; }
 			const data = Object.fromEntries(new FormData(workoutForm));
+			data.set_details = currentSetDetails();
+			data.sets = data.set_details.length;
+			data.reps = Math.max(...data.set_details.map(set => set.reps));
+			data.weight = Math.max(...data.set_details.map(set => set.weight));
 			try {
 				const saved = await api('/workouts', { method: 'POST', body: JSON.stringify(data) });
 				workouts.unshift(saved);
 				workoutForm.reset();
 				document.getElementById('workout-date-input').value = dateToInput(new Date());
 				document.getElementById('workout-time-input').value = localTime();
+				setWorkoutDetails([{ reps: 8, weight: 0 }, { reps: 8, weight: 0 }, { reps: 8, weight: 0 }]);
 				render();
-				showToast('Träningspasset är sparat.');
+				const activeTemplate = workoutTemplates().find(template => template.id === activeWorkoutTemplateId);
+				if (activeTemplate && activeWorkoutTemplateIndex + 1 < activeTemplate.exercises.length) {
+					activeWorkoutTemplateIndex += 1;
+					applyWorkoutTemplateExercise();
+					showToast('Övningen sparades. Nästa övning i mallen är ifylld.');
+				} else {
+					if (activeTemplate) { activeWorkoutTemplateId = ''; activeWorkoutTemplateIndex = 0; renderWorkoutTemplates(); }
+					showToast('Träningspasset är sparat.');
+				}
 			} catch (error) { handleApiError(error); }
 		});
 		function renderExerciseSuggestions() {
@@ -973,19 +1351,27 @@
 			const entries = [...lastByExercise.values()];
 			datalist.innerHTML = entries.map(item => '<option value="' + item.exercise.replace(/"/g, '&quot;') + '">').join('');
 			const recent = [...entries].sort((a, b) => new Date(b.date + 'T' + (b.workout_time || '00:00:00')) - new Date(a.date + 'T' + (a.workout_time || '00:00:00'))).slice(0, 4);
+			quickRepeat.replaceChildren();
 			quickRepeat.hidden = recent.length === 0;
-			quickRepeat.innerHTML = recent.length ? '<span class="quick-repeat-label">Logga samma som senast:</span>' + recent.map(item => '<button type="button" class="quick-repeat-chip" onclick="repeatWorkout(\'' + item.exercise.replace(/'/g, "\\'") + '\')">' + item.exercise + ' · ' + formatNumber(item.weight, 'kg') + '</button>').join('') : '';
+			if (recent.length) {
+				const label = document.createElement('span');
+				label.className = 'quick-repeat-label';
+				label.textContent = 'Logga samma som senast:';
+				quickRepeat.append(label);
+				recent.forEach(item => {
+					const button = document.createElement('button');
+					button.type = 'button'; button.className = 'quick-repeat-chip';
+					button.textContent = `${item.exercise} · ${formatNumber(Number(item.weight) || 0, 'kg')}`;
+					button.addEventListener('click', () => repeatWorkout(item.exercise));
+					quickRepeat.append(button);
+				});
+			}
 		}
 		function repeatWorkout(exercise) {
 			const key = exercise.toLocaleLowerCase('sv-SE');
 			const match = [...workouts].filter(item => String(item.exercise || '').trim().toLocaleLowerCase('sv-SE') === key).sort((a, b) => new Date(b.date + 'T' + (b.workout_time || '00:00:00')) - new Date(a.date + 'T' + (a.workout_time || '00:00:00')))[0];
 			if (!match) return;
-			workoutForm.elements.namedItem('exercise').value = match.exercise;
-			workoutForm.elements.namedItem('sets').value = match.sets;
-			workoutForm.elements.namedItem('reps').value = match.reps;
-			workoutForm.elements.namedItem('weight').value = match.weight;
-			const muscleField = workoutForm.elements.namedItem('muscleGroup');
-			if (muscleField) muscleField.value = match.muscle_group || 'Annat';
+			fillWorkoutForm(match);
 			document.getElementById('new-workout').scrollIntoView({ behavior: 'smooth' });
 			workoutForm.elements.namedItem('exercise').focus();
 			showToast('Fyllt i samma som senast – justera vid behov och spara.');
@@ -999,6 +1385,8 @@
 				showToast('Träningspasset är borttaget.');
 			} catch (error) { handleApiError(error); }
 		}
+		initializeWorkoutTools();
+		document.getElementById('logout-button').addEventListener('click', () => { activeWorkoutTemplateId = ''; activeWorkoutTemplateIndex = 0; });
 		updateAccountUi();
 		renderProfile();
 		render();
