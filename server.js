@@ -56,11 +56,23 @@ async function initDatabase() {
     reps INTEGER NOT NULL,
     weight DECIMAL(10,2) NOT NULL DEFAULT 0,
     set_details_json TEXT NOT NULL DEFAULT '[]',
+    workout_type VARCHAR(20) NOT NULL DEFAULT 'strength',
+    cardio_activity VARCHAR(20),
+    cardio_location VARCHAR(20),
+    distance_km DECIMAL(8,2),
+    duration_minutes DECIMAL(8,2),
+    incline_percent DECIMAL(5,2),
     notes VARCHAR(500) NOT NULL DEFAULT '',
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   )`);
   await pool.query('ALTER TABLE workouts ADD COLUMN IF NOT EXISTS workout_time TIME');
   await pool.query("ALTER TABLE workouts ADD COLUMN IF NOT EXISTS set_details_json TEXT NOT NULL DEFAULT '[]'");
+  await pool.query("ALTER TABLE workouts ADD COLUMN IF NOT EXISTS workout_type VARCHAR(20) NOT NULL DEFAULT 'strength'");
+  await pool.query('ALTER TABLE workouts ADD COLUMN IF NOT EXISTS cardio_activity VARCHAR(20)');
+  await pool.query('ALTER TABLE workouts ADD COLUMN IF NOT EXISTS cardio_location VARCHAR(20)');
+  await pool.query('ALTER TABLE workouts ADD COLUMN IF NOT EXISTS distance_km DECIMAL(8,2)');
+  await pool.query('ALTER TABLE workouts ADD COLUMN IF NOT EXISTS duration_minutes DECIMAL(8,2)');
+  await pool.query('ALTER TABLE workouts ADD COLUMN IF NOT EXISTS incline_percent DECIMAL(5,2)');
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_workouts_user_date ON workouts (user_id, date)`);
   await pool.query(`CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id SERIAL PRIMARY KEY,
@@ -308,7 +320,7 @@ app.delete('/api/measurements/:id', requireUser, async (req, res, next) => {
 });
 app.get('/api/workouts', requireUser, async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT id, date, workout_time, exercise, muscle_group, sets, reps, weight, set_details_json, notes FROM workouts WHERE user_id = $1 ORDER BY date DESC, workout_time DESC NULLS LAST', [req.user.id]);
+    const { rows } = await pool.query('SELECT id, date, workout_time, exercise, muscle_group, sets, reps, weight, set_details_json, workout_type, cardio_activity, cardio_location, distance_km, duration_minutes, incline_percent, notes FROM workouts WHERE user_id = $1 ORDER BY date DESC, workout_time DESC NULLS LAST', [req.user.id]);
     res.json({ workouts: rows.map(row => {
       const { set_details_json, ...workout } = row;
       let set_details = [];
@@ -320,30 +332,49 @@ app.get('/api/workouts', requireUser, async (req, res, next) => {
 app.post('/api/workouts', requireUser, async (req, res, next) => {
   try {
     const data = req.body || {};
+    const workout_type = data.workout_type === 'cardio' ? 'cardio' : 'strength';
+    const cardioActivities = ['walking', 'jogging', 'running'];
+    const cardioLocations = ['treadmill', 'outdoor'];
+    let cardio = null;
+    if (workout_type === 'cardio') {
+      const distance = Number(data.distance_km);
+      const duration = Number(data.duration_minutes);
+      const incline = data.incline_percent === '' || data.incline_percent === undefined ? null : Number(data.incline_percent);
+      if (!cardioActivities.includes(data.cardio_activity) || !cardioLocations.includes(data.cardio_location) ||
+        !Number.isFinite(distance) || distance <= 0 || distance > 1000 ||
+        !Number.isFinite(duration) || duration <= 0 || duration > 1440 ||
+        (incline !== null && (!Number.isFinite(incline) || incline < 0 || incline > 40)) ||
+        (data.cardio_location === 'outdoor' && incline !== null)) {
+        return res.status(400).json({ error: 'Ange aktivitet, plats, distans och tid med giltiga värden. Lutning kan bara anges för löpband (0–40 %).' });
+      }
+      cardio = { cardio_activity: data.cardio_activity, cardio_location: data.cardio_location, distance_km: distance, duration_minutes: duration, incline_percent: incline };
+    }
     const providedSets = data.set_details;
     const fallbackSets = Number(data.sets);
-    if (providedSets !== undefined && (!Array.isArray(providedSets) || providedSets.length < 1 || providedSets.length > 100 || providedSets.some(set => !set || !Number.isInteger(Number(set.reps)) || Number(set.reps) < 1 || Number(set.reps) > 1000 || !Number.isFinite(Number(set.weight)) || Number(set.weight) < 0 || Number(set.weight) > 10000))) {
+    if (workout_type === 'strength' && providedSets !== undefined && (!Array.isArray(providedSets) || providedSets.length < 1 || providedSets.length > 100 || providedSets.some(set => !set || !Number.isInteger(Number(set.reps)) || Number(set.reps) < 1 || Number(set.reps) > 1000 || !Number.isFinite(Number(set.weight)) || Number(set.weight) < 0 || Number(set.weight) > 10000))) {
       return res.status(400).json({ error: 'Varje set måste ha 1–1000 repetitioner och en giltig vikt.' });
     }
-    const set_details = providedSets
+    const set_details = workout_type === 'cardio' ? [] : providedSets
       ? providedSets.map(set => ({ reps: Number(set.reps), weight: Number(set.weight) }))
       : Number.isInteger(fallbackSets) && fallbackSets > 0 && fallbackSets <= 100 && Number.isInteger(Number(data.reps)) && Number(data.reps) > 0 && Number(data.reps) <= 1000 && Number.isFinite(Number(data.weight)) && Number(data.weight) >= 0 && Number(data.weight) <= 10000
         ? Array.from({ length: fallbackSets }, () => ({ reps: Number(data.reps), weight: Number(data.weight) }))
         : [];
-    if (!data.date || !data.exercise || !set_details.length || (data.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(data.time))) return res.status(400).json({ error: 'Fyll i giltigt datum, tid, övning och minst ett giltigt set.' });
+    if (!data.date || !data.exercise || (workout_type === 'strength' && !set_details.length) || (data.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(data.time))) return res.status(400).json({ error: 'Fyll i giltigt datum, tid, övning och minst ett giltigt set.' });
     const workout = {
       id: crypto.randomUUID(),
       date: String(data.date),
       workout_time: data.time ? `${data.time}:00` : null,
       exercise: String(data.exercise).slice(0, 100),
       muscle_group: String(data.muscleGroup || 'Annat').slice(0, 50),
-      sets: set_details.length,
-      reps: Math.max(...set_details.map(set => set.reps)),
-      weight: Math.max(...set_details.map(set => set.weight)),
+      sets: cardio ? 0 : set_details.length,
+      reps: cardio ? 0 : Math.max(...set_details.map(set => set.reps)),
+      weight: cardio ? 0 : Math.max(...set_details.map(set => set.weight)),
       set_details,
+      workout_type,
+      ...(cardio || {}),
       notes: String(data.notes || '').slice(0, 500)
     };
-    await pool.query('INSERT INTO workouts (id, user_id, date, workout_time, exercise, muscle_group, sets, reps, weight, set_details_json, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)', [workout.id, req.user.id, workout.date, workout.workout_time, workout.exercise, workout.muscle_group, workout.sets, workout.reps, workout.weight, JSON.stringify(set_details), workout.notes]);
+    await pool.query('INSERT INTO workouts (id, user_id, date, workout_time, exercise, muscle_group, sets, reps, weight, set_details_json, workout_type, cardio_activity, cardio_location, distance_km, duration_minutes, incline_percent, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)', [workout.id, req.user.id, workout.date, workout.workout_time, workout.exercise, workout.muscle_group, workout.sets, workout.reps, workout.weight, JSON.stringify(set_details), workout.workout_type, workout.cardio_activity || null, workout.cardio_location || null, workout.distance_km ?? null, workout.duration_minutes ?? null, workout.incline_percent ?? null, workout.notes]);
     res.status(201).json(workout);
   } catch (error) { next(error); }
 });
