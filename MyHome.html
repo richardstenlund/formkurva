@@ -875,24 +875,33 @@
 			const timer = setInterval(() => { if (!panel.isConnected) clearInterval(timer); else load(); }, 10000);
 			return panel;
 		}
+		let seasonMonth = '';
 		async function loadSeason() {
 			const box = document.getElementById('season-box');
 			try {
-				const data = await api('/season');
+				const data = await api('/season' + (seasonMonth ? '?month=' + encodeURIComponent(seasonMonth) : ''));
+				seasonMonth = data.selected.month;
+				const select = el('select');
+				data.months.forEach(item => { const option = el('option', '', item.label + (item.current ? ' (pågår)' : '')); option.value = item.month; select.append(option); });
+				select.value = data.selected.month;
+				select.addEventListener('change', () => { seasonMonth = select.value; loadSeason(); });
 				const board = el('ol', 'leaderboard');
-				data.current.entries.forEach((entry, index) => {
+				data.selected.entries.forEach((entry, index) => {
 					const row = el('li', 'leaderboard-row' + (entry.isMe ? ' leaderboard-me' : ''));
 					row.append(el('span', 'leaderboard-place', entry.points > 0 ? ['🥇', '🥈', '🥉'][index] || String(index + 1) : '–'), el('strong', '', entry.isMe ? `${entry.name} (du)` : entry.name), el('span', 'pr-value', `${entry.points} p`));
 					board.append(row);
 				});
-				const parts = [el('strong', '', `${data.current.label} – ${data.current.daysLeft} dagar kvar`), board];
-				if (data.current.entries.length < 2) parts.push(emptyState('Lägg till vänner för att tävla om säsongen.'));
-				const winner = data.previous.entries[0];
-				if (winner) parts.push(el('p', 'panel-subtitle', `🏆 ${data.previous.label}: ${winner.isMe ? 'du vann' : winner.name + ' vann'} med ${winner.points} poäng`));
+				const picker = el('div', 'friend-form'); picker.append(select);
+				const parts = [picker, el('strong', '', data.selected.current ? `${data.selected.label} – ${data.selected.daysLeft} dagar kvar` : `${data.selected.label} – avslutad`), board];
+				if (data.selected.entries.length < 2) parts.push(emptyState('Lägg till vänner för att tävla om säsongen.'));
+				const past = data.months.filter(item => !item.current);
+				if (past.length) {
+					parts.push(el('h4', '', 'Tidigare säsonger'));
+					parts.push(simpleList(past.map(item => [item.label, item.winner ? `🏆 ${item.winner.isMe ? 'Du' : item.winner.name} (${item.winner.points} p) · dina: ${item.myPoints} p` : 'Ingen aktivitet'])));
+				}
 				box.replaceChildren(...parts);
 			} catch (error) { handleApiError(error); }
-		}
-		let notificationTimer = 0;
+		}		let notificationTimer = 0;
 		function notificationSeen() { try { return new Set(JSON.parse(localStorage.getItem('formkurva-notified-' + sessionUserId) || 'null') || []); } catch (error) { return null; } }
 		async function pollNotifications() {
 			if (!serverMode || !currentUser) return;

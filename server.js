@@ -942,14 +942,24 @@ app.get('/api/season', requireUser, async (req, res, next) => {
     ]);
     const build = range => users.map(user => ({ userId: user.id, name: user.name, isMe: user.id === req.user.id, ...seasonPoints(grouped.get(user.id) || [], range.from, range.to) }))
       .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, 'sv'));
-    const current = monthRange(0);
-    const previous = monthRange(-1);
     const now = new Date();
-    const daysLeft = Math.max(0, Math.round((Date.parse(current.to) - Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())) / 86400000));
-    res.json({ current: { label: current.label, daysLeft, entries: build(current) }, previous: { label: previous.label, entries: build(previous).filter(entry => entry.points > 0) } });
+    const earliest = [...grouped.values()].flat().reduce((min, row) => dateOf(row) < min ? dateOf(row) : min, isoDay(now)).slice(0, 7);
+    const months = [];
+    for (let offset = 0; offset > -36; offset -= 1) {
+      const range = monthRange(offset);
+      if (range.from.slice(0, 7) < earliest) break;
+      const entries = build(range);
+      months.push({ month: range.from.slice(0, 7), label: range.label, current: offset === 0, winner: entries[0]?.points > 0 ? entries[0] : null, mine: entries.find(entry => entry.isMe), entries });
+    }
+    const requested = /^\d{4}-\d{2}$/.test(String(req.query.month || '')) ? String(req.query.month) : months[0].month;
+    const selected = months.find(month => month.month === requested) || months[0];
+    const daysLeft = Math.max(0, Math.round((Date.parse(monthRange(0).to) - Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())) / 86400000));
+    res.json({
+      selected: { month: selected.month, label: selected.label, current: selected.current, daysLeft: selected.current ? daysLeft : 0, entries: selected.entries },
+      months: months.map(month => ({ month: month.month, label: month.label, current: month.current, winner: month.winner ? { name: month.winner.name, isMe: month.winner.isMe, points: month.winner.points } : null, myPoints: month.mine?.points || 0 }))
+    });
   } catch (error) { next(error); }
-});
-app.get('/api/notifications', requireUser, async (req, res, next) => {
+});app.get('/api/notifications', requireUser, async (req, res, next) => {
   try {
     const me = req.user.id;
     const items = [];
