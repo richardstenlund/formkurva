@@ -705,6 +705,22 @@ app.get('/api/records', requireUser, async (req, res, next) => {
     res.json({ exercises: list });
   } catch (error) { next(error); }
 });
+app.get('/api/activity', requireUser, async (req, res, next) => {
+  try {
+    const ids = [req.user.id, ...await acceptedFriendIds(req.user.id)];
+    const { rows } = await pool.query(
+      `SELECT c.kind, c.created_at, c.from_user, c.to_user, ${nameSql} AS from_name,
+              COALESCE(NULLIF(TRIM((t.profile_json::jsonb)->>'name'), ''), 'Användare #' || t.id) AS to_name
+       FROM cheers c JOIN users u ON u.id = c.from_user JOIN users t ON t.id = c.to_user
+       WHERE c.from_user = ANY($1::int[]) AND c.to_user = ANY($1::int[])
+       ORDER BY c.created_at DESC LIMIT 30`, [ids]);
+    res.json({ items: rows.map(row => ({
+      kind: row.kind, createdAt: row.created_at,
+      fromUserId: row.from_user, fromName: row.from_name, toUserId: row.to_user, toName: row.to_name,
+      fromMe: row.from_user === req.user.id, toMe: row.to_user === req.user.id
+    })) });
+  } catch (error) { next(error); }
+});
 app.get('/api/feed', requireUser, async (req, res, next) => {
   try {
     const ids = await acceptedFriendIds(req.user.id);
