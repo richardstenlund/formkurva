@@ -420,7 +420,7 @@ app.put('/api/profile', requireUser, async (req, res, next) => {
     res.json({ profile });
   } catch (error) { next(error); }
 });
-const cheerKinds = new Set(['pepp', 'clap', 'fire', 'challenge']);
+const cheerKinds = new Set(['pepp', 'clap', 'fire', 'challenge', 'nudge', 'congrats']);
 const nameSql = "COALESCE(NULLIF(TRIM((u.profile_json::jsonb)->>'name'), ''), 'Användare #' || u.id)";
 const visibleSql = "COALESCE((u.profile_json::jsonb)->>'communityVisible', 'true') <> 'false'";
 const dateOf = row => row.date.toISOString ? row.date.toISOString().slice(0, 10) : String(row.date);
@@ -658,7 +658,9 @@ app.get('/api/cheers', requireUser, async (req, res, next) => {
     const { rows } = await pool.query(
       `SELECT c.kind, c.created_at, ${nameSql} AS name, c.from_user FROM cheers c JOIN users u ON u.id = c.from_user
        WHERE c.to_user = $1 ORDER BY c.created_at DESC LIMIT 15`, [req.user.id]);
-    res.json({ cheers: rows.map(row => ({ kind: row.kind, name: row.name, fromUserId: row.from_user, createdAt: row.created_at })) });
+    const { rows: [counts] } = await pool.query('SELECT COUNT(*) FILTER (WHERE from_user = $1) AS sent, COUNT(*) FILTER (WHERE to_user = $1) AS received FROM cheers WHERE from_user = $1 OR to_user = $1', [req.user.id]);
+    const friends = (await acceptedFriendIds(req.user.id)).length;
+    res.json({ stats: { sent: Number(counts.sent), received: Number(counts.received), friends }, cheers: rows.map(row => ({ kind: row.kind, name: row.name, fromUserId: row.from_user, createdAt: row.created_at })) });
   } catch (error) { next(error); }
 });
 app.get('/api/leaderboard', requireUser, async (req, res, next) => {
@@ -672,8 +674,35 @@ app.get('/api/leaderboard', requireUser, async (req, res, next) => {
     ]);
     res.json({ period, since, entries: users.map(user => {
       const rows = grouped.get(user.id) || [];
-      return { userId: user.id, name: user.name, isMe: user.id === req.user.id, ...summarize(rows, since), streak: currentStreak(rows) };
+      return { userId: user.id, name: user.name, isMe: user.id === req.user.id, ...summarize(rows, since), streak: currentStreak(rows), lastWorkout: rows.length ? dateOf(rows[0]) : null };
     }) });
+  } catch (error) { next(error); }
+});
+app.get('/api/records', requireUser, async (req, res, next) => {
+  try {
+    const ids = [req.user.id, ...await acceptedFriendIds(req.user.id)];
+    const [{ rows: users }, grouped] = await Promise.all([
+      pool.query(`SELECT u.id, ${nameSql} AS name FROM users u WHERE u.id = ANY($1::int[])`, [ids]),
+      loadWorkoutRows(ids)
+    ]);
+    const exercises = new Map();
+    users.forEach(user => {
+      const best = new Map();
+      (grouped.get(user.id) || []).filter(row => row.workout_type !== 'cardio').forEach(row => {
+        const key = String(row.exercise).trim().toLowerCase();
+        const weight = Number(row.weight);
+        if (!best.has(key) || weight > best.get(key).weight) best.set(key, { exercise: String(row.exercise).trim(), weight, reps: row.reps });
+      });
+      best.forEach((record, key) => {
+        if (!exercises.has(key)) exercises.set(key, { exercise: record.exercise, entries: [] });
+        exercises.get(key).entries.push({ userId: user.id, name: user.name, isMe: user.id === req.user.id, weight: record.weight, reps: record.reps });
+      });
+    });
+    const list = [...exercises.values()]
+      .map(item => ({ ...item, entries: item.entries.sort((a, b) => b.weight - a.weight) }))
+      .sort((a, b) => b.entries.length - a.entries.length || a.exercise.localeCompare(b.exercise, 'sv'))
+      .slice(0, 30);
+    res.json({ exercises: list });
   } catch (error) { next(error); }
 });
 app.get('/api/feed', requireUser, async (req, res, next) => {
