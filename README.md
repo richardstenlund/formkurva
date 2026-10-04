@@ -77,3 +77,5 @@ docker compose exec db pg_dump -U formkurva -d formkurva > formkurva.sql
 - Den inbyggda kontofunktionen använder hashade lösenord och sessionscookies. Konfigurera SMTP innan du litar på glömt-lösenord mot internet.
 
 Fliken **Historik** låter dig bläddra bakåt månad för månad eller år för år: sammanfattning med jämförelse mot föregående period, personbästa, milstolpar, kroppsmåttsförändring, kalender och dag-för-dag-lista.
+
+Flikarna **Utveckling** (dagens/veckans uppdrag, återhämtning per muskelgrupp, grafer för kroppsmått och 1RM), **Kost** (måltider, kalori- och proteinmål) och **Framsteg** (privata framstegsbilder med före/efter-jämförelse) är nya. Under Historik > År kan du skapa en delbar bild med ditt träningsår.

@@ -139,6 +139,29 @@ async function initDatabase() {
     FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS meals (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    date DATE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    kcal INTEGER NOT NULL DEFAULT 0,
+    protein DECIMAL(7,1) NOT NULL DEFAULT 0,
+    carbs DECIMAL(7,1) NOT NULL DEFAULT 0,
+    fat DECIMAL(7,1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_meals_user_date ON meals (user_id, date)`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS progress_photos (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    date DATE NOT NULL,
+    note VARCHAR(200) NOT NULL DEFAULT '',
+    image TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_progress_photos_user_date ON progress_photos (user_id, date)`);
   await pool.query(`CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
@@ -1014,7 +1037,54 @@ app.get('/api/feed', requireUser, async (req, res, next) => {
     })) });
   } catch (error) { next(error); }
 });
-app.delete('/api/account', requireUser, async (req, res, next) => {
+const validDay = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value + 'T12:00:00Z'));
+const macro = (value, max) => { const number = Number(value || 0); return Number.isFinite(number) && number >= 0 && number <= max ? Math.round(number * 10) / 10 : null; };
+app.get('/api/meals', requireUser, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query("SELECT id, date, name, kcal, protein, carbs, fat FROM meals WHERE user_id = $1 AND date >= CURRENT_DATE - INTERVAL '120 days' ORDER BY date DESC, created_at DESC", [req.user.id]);
+    res.json({ meals: rows.map(row => ({ id: row.id, date: dateOf(row), name: row.name, kcal: row.kcal, protein: Number(row.protein), carbs: Number(row.carbs), fat: Number(row.fat) })) });
+  } catch (error) { next(error); }
+});
+app.post('/api/meals', requireUser, async (req, res, next) => {
+  try {
+    const { date, name } = req.body || {};
+    const kcal = macro(req.body?.kcal, 10000), protein = macro(req.body?.protein, 1000), carbs = macro(req.body?.carbs, 2000), fat = macro(req.body?.fat, 1000);
+    if (!validDay(date) || typeof name !== 'string' || !name.trim() || name.length > 100 || [kcal, protein, carbs, fat].includes(null)) return res.status(400).json({ error: 'Ange datum, namn och giltiga värden.' });
+    const id = crypto.randomUUID();
+    await pool.query('INSERT INTO meals (id, user_id, date, name, kcal, protein, carbs, fat) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [id, req.user.id, date, name.trim(), Math.round(kcal), protein, carbs, fat]);
+    res.status(201).json({ id, date, name: name.trim(), kcal: Math.round(kcal), protein, carbs, fat });
+  } catch (error) { next(error); }
+});
+app.delete('/api/meals/:id', requireUser, async (req, res, next) => {
+  try {
+    await pool.query('DELETE FROM meals WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    res.status(204).end();
+  } catch (error) { next(error); }
+});
+app.get('/api/photos', requireUser, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query('SELECT id, date, note, image FROM progress_photos WHERE user_id = $1 ORDER BY date DESC, created_at DESC LIMIT 200', [req.user.id]);
+    res.json({ photos: rows.map(row => ({ id: row.id, date: dateOf(row), note: row.note, image: row.image })) });
+  } catch (error) { next(error); }
+});
+app.post('/api/photos', requireUser, async (req, res, next) => {
+  try {
+    const { date, image } = req.body || {};
+    const note = String(req.body?.note || '').slice(0, 200);
+    if (!validDay(date) || typeof image !== 'string' || !/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(image) || image.length > 2_500_000) return res.status(400).json({ error: 'Ange datum och en JPEG-bild under cirka 1,8 MB.' });
+    const { rows: [count] } = await pool.query('SELECT COUNT(*) AS count FROM progress_photos WHERE user_id = $1', [req.user.id]);
+    if (Number(count.count) >= 200) return res.status(400).json({ error: 'Du kan spara högst 200 bilder.' });
+    const id = crypto.randomUUID();
+    await pool.query('INSERT INTO progress_photos (id, user_id, date, note, image) VALUES ($1, $2, $3, $4, $5)', [id, req.user.id, date, note, image]);
+    res.status(201).json({ id, date, note, image });
+  } catch (error) { next(error); }
+});
+app.delete('/api/photos/:id', requireUser, async (req, res, next) => {
+  try {
+    await pool.query('DELETE FROM progress_photos WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    res.status(204).end();
+  } catch (error) { next(error); }
+});app.delete('/api/account', requireUser, async (req, res, next) => {
   try {
     await pool.query('DELETE FROM users WHERE id = $1', [req.user.id]);
     res.setHeader('Set-Cookie', 'formkurva_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0');
