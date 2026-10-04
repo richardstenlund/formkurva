@@ -44,7 +44,7 @@ Glömt lösenord finns på inloggningen. Fyll i `SMTP_*` och `APP_URL` i `.env` 
 
 Den samlade översiktssidan (`/`) samlar kroppsmått och träningspass på ett ställe. Där kan användare logga kroppsvikt, midja, bröst, överarm, lår och höft, spara längd i sin profil och registrera träningspass med övning, muskelgrupp, set, reps, vikt och tid. Uppgifterna sparas per konto i PostgreSQL. På översiktssidan finns medaljer för träningsmängd, aktiva dagar, morgon/dag/kvällsträning och antal pass per övning. Diagram visar träningsdagar per vecka och valda kroppsmåtts förändring. Träningspåminnelser kan ställas in per tid och vardags-/helgfrekvens; de visas medan Formkurva är öppet. Webbläsaraviseringar är valfria och kräver tillåtelse samt HTTPS eller localhost.
 
-Under **Vänner** på profilsidan kan användare skicka vänförfrågningar med varandras e-postadress. När förfrågan accepterats kan vännerna se varandras antal pass, aktiva dagar, personbästa, konditionsdistans och senaste pass. Kroppsmått och e-postadresser delas aldrig, och båda parter kan när som helst ta bort vänskapen.
+Fliken **Community** låter användare hitta varandra (sök på visningsnamn), se publika profiler med medaljer, skicka vänförfrågningar (även via e-post), och tävla mot vänner i en topplista per vecka eller månad. Vänner kan se varandras personbästa och senaste pass, jämföra veckan, skicka peppning (💪 👏 🔥 ⚔️, en av varje sort per dag) och se mottagna hälsningar och ett vänflöde. Man kan välja bort att synas i communityn; vänner ser fortfarande träningen. Kroppsmått och e-postadresser delas aldrig, och vänskap kan tas bort när som helst.
 
 Vid vanlig HTTP i hemnätet ska `SECURE_COOKIES` vara `false`. När du lägger sidan bakom HTTPS ändrar du den till `true` och kör om containern.
 

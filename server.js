@@ -86,6 +86,18 @@ async function initDatabase() {
   )`);
   await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_friendships_pair ON friendships (LEAST(requester_id, addressee_id), GREATEST(requester_id, addressee_id))');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_friendships_addressee ON friendships (addressee_id)');
+  await pool.query(`CREATE TABLE IF NOT EXISTS cheers (
+    id SERIAL PRIMARY KEY,
+    from_user INTEGER NOT NULL,
+    to_user INTEGER NOT NULL,
+    kind VARCHAR(12) NOT NULL,
+    cheer_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (from_user) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (to_user) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE (from_user, to_user, kind, cheer_date)
+  )`);
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_cheers_to_user ON cheers (to_user, created_at DESC)');
   await pool.query(`CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
@@ -408,36 +420,143 @@ app.put('/api/profile', requireUser, async (req, res, next) => {
     res.json({ profile });
   } catch (error) { next(error); }
 });
-function displayNameFor(row) {
-  const name = String(parseProfile(row.profile_json).name || '').trim();
-  return name || String(row.email).split('@')[0];
+const cheerKinds = new Set(['pepp', 'clap', 'fire', 'challenge']);
+const nameSql = "COALESCE(NULLIF(TRIM((u.profile_json::jsonb)->>'name'), ''), 'Användare #' || u.id)";
+const visibleSql = "COALESCE((u.profile_json::jsonb)->>'communityVisible', 'true') <> 'false'";
+const dateOf = row => row.date.toISOString ? row.date.toISOString().slice(0, 10) : String(row.date);
+const isoDay = date => date.toISOString().slice(0, 10);
+const round1 = value => Math.round(value * 10) / 10;
+
+function weekStart() {
+  const now = new Date();
+  const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));
+  return isoDay(day);
 }
+function monthStart() {
+  const now = new Date();
+  return isoDay(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)));
+}
+function rowVolume(row) {
+  let sets = [];
+  try { sets = JSON.parse(row.set_details_json || '[]'); } catch { sets = []; }
+  if (Array.isArray(sets) && sets.length) return sets.reduce((total, set) => total + (Number(set.reps) || 0) * (Number(set.weight) || 0), 0);
+  return (Number(row.sets) || 0) * (Number(row.reps) || 0) * (Number(row.weight) || 0);
+}
+function summarize(rows, since = '') {
+  const list = since ? rows.filter(row => dateOf(row) >= since) : rows;
+  let cardioKm = 0;
+  let volume = 0;
+  list.forEach(row => {
+    if (row.workout_type === 'cardio') cardioKm += Number(row.distance_km) || 0;
+    else volume += rowVolume(row);
+  });
+  return { workouts: list.length, days: new Set(list.map(dateOf)).size, cardioKm: round1(cardioKm), volume: Math.round(volume) };
+}
+function currentStreak(rows) {
+  const days = new Set(rows.map(dateOf));
+  const cursor = new Date();
+  if (!days.has(isoDay(cursor))) cursor.setUTCDate(cursor.getUTCDate() - 1);
+  let streak = 0;
+  while (days.has(isoDay(cursor))) { streak += 1; cursor.setUTCDate(cursor.getUTCDate() - 1); }
+  return streak;
+}
+function computeBadges(rows) {
+  const days = new Set(rows.map(dateOf));
+  const slots = { morning: new Set(), day: new Set(), evening: new Set() };
+  const exerciseCounts = new Map();
+  const cardio = { walking: 0, jogging: 0, running: 0 };
+  const km = { treadmill: 0, outdoor: 0 };
+  rows.forEach(row => {
+    const hour = Number(String(row.workout_time || '').slice(0, 2));
+    if (hour >= 5 && hour < 9) slots.morning.add(dateOf(row));
+    else if (hour >= 9 && hour < 17) slots.day.add(dateOf(row));
+    else if (hour >= 17 && hour < 23) slots.evening.add(dateOf(row));
+    if (row.workout_type === 'cardio') {
+      if (row.cardio_activity in cardio) cardio[row.cardio_activity] += 1;
+      if (row.cardio_location in km) km[row.cardio_location] += Number(row.distance_km) || 0;
+    } else {
+      const key = String(row.exercise).trim().toLowerCase();
+      const entry = exerciseCounts.get(key) || { name: String(row.exercise).trim(), count: 0 };
+      entry.count += 1;
+      exerciseCounts.set(key, entry);
+    }
+  });
+  const topExercises = [...exerciseCounts.values()].sort((a, b) => b.count - a.count).slice(0, 4);
+  const items = [
+    ['Träningspass totalt', 'pass', rows.length, [10, 50, 100]],
+    ['Aktiva träningsdagar', 'dagar', days.size, [3, 10, 25]],
+    ['Morgontränare', 'dagar kl. 05–09', slots.morning.size, [1, 5, 20]],
+    ['Dagsform', 'dagar kl. 09–17', slots.day.size, [1, 5, 20]],
+    ['Kvällskämpe', 'dagar kl. 17–23', slots.evening.size, [1, 5, 20]],
+    ['Gång', 'pass', cardio.walking, [1, 5, 20]],
+    ['Jogging', 'pass', cardio.jogging, [1, 5, 20]],
+    ['Löpning', 'pass', cardio.running, [1, 5, 20]],
+    ['Löpband · distans', 'km', round1(km.treadmill), [10, 50, 100]],
+    ['Utomhus · distans', 'km', round1(km.outdoor), [10, 50, 100]],
+    ...topExercises.map(item => [item.name, 'pass', item.count, [1, 5, 10]])
+  ];
+  return items
+    .map(([title, unit, count, thresholds]) => {
+      const tier = thresholds.filter(threshold => count >= threshold).length;
+      return { title, unit, count, tier, next: thresholds[tier] ?? null };
+    })
+    .filter(badge => badge.tier > 0)
+    .sort((a, b) => b.tier - a.tier);
+}
+async function loadWorkoutRows(userIds) {
+  const grouped = new Map(userIds.map(id => [id, []]));
+  if (!userIds.length) return grouped;
+  const { rows } = await pool.query('SELECT user_id, date, workout_time, exercise, sets, reps, weight, set_details_json, workout_type, cardio_activity, cardio_location, distance_km, duration_minutes FROM workouts WHERE user_id = ANY($1::int[]) ORDER BY date DESC, workout_time DESC NULLS LAST', [userIds]);
+  rows.forEach(row => grouped.get(row.user_id)?.push(row));
+  return grouped;
+}
+async function relationshipsFor(userId) {
+  const { rows } = await pool.query('SELECT id, status, requester_id, addressee_id FROM friendships WHERE requester_id = $1 OR addressee_id = $1', [userId]);
+  const map = new Map();
+  rows.forEach(row => {
+    const otherId = row.requester_id === userId ? row.addressee_id : row.requester_id;
+    map.set(otherId, { id: row.id, status: row.status, direction: row.requester_id === userId ? 'outgoing' : 'incoming' });
+  });
+  return map;
+}
+async function acceptedFriendIds(userId) {
+  const relations = await relationshipsFor(userId);
+  return [...relations.entries()].filter(([, relation]) => relation.status === 'accepted').map(([id]) => id);
+}
+
 app.get('/api/friends', requireUser, async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      `SELECT f.id, f.status, f.requester_id, u.id AS other_id, u.email, u.profile_json
+      `SELECT f.id, f.status, f.requester_id, u.id AS other_id, ${nameSql} AS name
        FROM friendships f JOIN users u ON u.id = CASE WHEN f.requester_id = $1 THEN f.addressee_id ELSE f.requester_id END
        WHERE f.requester_id = $1 OR f.addressee_id = $1 ORDER BY f.created_at DESC`, [req.user.id]);
     const result = { friends: [], incoming: [], outgoing: [] };
     rows.forEach(row => {
-      const item = { id: row.id, userId: row.other_id, name: displayNameFor(row) };
+      const item = { id: row.id, userId: row.other_id, name: row.name };
       if (row.status === 'accepted') result.friends.push(item);
       else if (row.requester_id === req.user.id) result.outgoing.push(item);
-      else result.incoming.push({ ...item, email: row.email });
+      else result.incoming.push(item);
     });
     res.json(result);
   } catch (error) { next(error); }
 });
 app.post('/api/friends', requireUser, async (req, res, next) => {
   try {
-    const email = String(req.body?.email || '').trim().toLowerCase();
-    if (!email || email.length > 254) return res.status(400).json({ error: 'Ange en e-postadress.' });
-    const message = 'Om e-postadressen tillhör ett konto har en vänförfrågan skickats.';
-    const { rows: [target] } = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+    const message = 'Om användaren finns har en vänförfrågan skickats.';
+    let target;
+    if (req.body?.userId !== undefined) {
+      const { rows } = await pool.query(`SELECT u.id FROM users u WHERE u.id = $1 AND ${visibleSql}`, [Number(req.body.userId) || 0]);
+      target = rows[0];
+    } else {
+      const email = String(req.body?.email || '').trim().toLowerCase();
+      if (!email || email.length > 254) return res.status(400).json({ error: 'Ange en e-postadress.' });
+      const { rows } = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+      target = rows[0];
+    }
     if (!target || target.id === req.user.id) return res.status(202).json({ message });
-    const { rows: [existing] } = await pool.query(
-      'SELECT id, status, requester_id FROM friendships WHERE LEAST(requester_id, addressee_id) = LEAST($1::int, $2::int) AND GREATEST(requester_id, addressee_id) = GREATEST($1::int, $2::int)', [req.user.id, target.id]);
-    if (existing && existing.status === 'pending' && existing.requester_id === target.id) {
+    const existing = (await relationshipsFor(req.user.id)).get(target.id);
+    if (existing && existing.status === 'pending' && existing.direction === 'incoming') {
       await pool.query("UPDATE friendships SET status = 'accepted' WHERE id = $1", [existing.id]);
       return res.status(202).json({ message: 'Ni är nu vänner.' });
     }
@@ -458,35 +577,120 @@ app.delete('/api/friends/:id', requireUser, async (req, res, next) => {
     res.status(204).end();
   } catch (error) { next(error); }
 });
-app.get('/api/friends/:userId/summary', requireUser, async (req, res, next) => {
+app.get('/api/community', requireUser, async (req, res, next) => {
   try {
-    const friendId = Number(req.params.userId) || 0;
-    const { rows: [friendship] } = await pool.query(
-      "SELECT 1 FROM friendships WHERE status = 'accepted' AND ((requester_id = $1 AND addressee_id = $2) OR (requester_id = $2 AND addressee_id = $1))", [req.user.id, friendId]);
-    if (!friendship) return res.status(403).json({ error: 'Ni är inte vänner.' });
-    const { rows: [friend] } = await pool.query('SELECT email, profile_json FROM users WHERE id = $1', [friendId]);
-    const { rows } = await pool.query('SELECT date, exercise, sets, reps, weight, workout_type, cardio_activity, cardio_location, distance_km, duration_minutes FROM workouts WHERE user_id = $1 ORDER BY date DESC, workout_time DESC NULLS LAST', [friendId]);
-    const dateOf = row => row.date.toISOString ? row.date.toISOString().slice(0, 10) : String(row.date);
-    const since = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-    const records = new Map();
-    let cardioKm = 0;
-    rows.forEach(row => {
-      if (row.workout_type === 'cardio') { cardioKm += Number(row.distance_km) || 0; return; }
-      const key = row.exercise.toLowerCase();
-      const weight = Number(row.weight);
-      if (!records.has(key) || weight > records.get(key).weight) records.set(key, { exercise: row.exercise, weight, reps: row.reps });
-    });
-    res.json({
-      name: displayNameFor(friend),
-      totalWorkouts: rows.length,
-      activeDays: new Set(rows.map(dateOf)).size,
-      last30Days: rows.filter(row => dateOf(row) >= since).length,
-      cardioKm: Math.round(cardioKm * 10) / 10,
-      records: [...records.values()].sort((a, b) => b.weight - a.weight).slice(0, 8),
-      recent: rows.slice(0, 5).map(row => row.workout_type === 'cardio'
+    const q = String(req.query.q || '').trim().toLowerCase().slice(0, 50).replace(/[%_\\]/g, '\\$&');
+    const { rows: users } = await pool.query(
+      `SELECT u.id, ${nameSql} AS name FROM users u
+       WHERE u.id <> $1 AND ${visibleSql} AND ($2 = '' OR LOWER(${nameSql}) LIKE '%' || $2 || '%')
+       ORDER BY name LIMIT 50`, [req.user.id, q]);
+    const [grouped, relations] = await Promise.all([loadWorkoutRows(users.map(user => user.id)), relationshipsFor(req.user.id)]);
+    const since = weekStart();
+    res.json({ users: users.map(user => {
+      const workouts = grouped.get(user.id) || [];
+      const relation = relations.get(user.id);
+      return {
+        id: user.id,
+        name: user.name,
+        totalWorkouts: workouts.length,
+        weekWorkouts: summarize(workouts, since).workouts,
+        streak: currentStreak(workouts),
+        relation: relation ? { id: relation.id, status: relation.status, direction: relation.direction } : null
+      };
+    }) });
+  } catch (error) { next(error); }
+});
+app.get('/api/people/:id', requireUser, async (req, res, next) => {
+  try {
+    const personId = Number(req.params.id) || 0;
+    const { rows: [person] } = await pool.query(`SELECT u.id, ${nameSql} AS name, ${visibleSql} AS visible FROM users u WHERE u.id = $1`, [personId]);
+    if (!person) return res.status(404).json({ error: 'Användaren hittades inte.' });
+    const relation = (await relationshipsFor(req.user.id)).get(personId);
+    const isSelf = personId === req.user.id;
+    const isFriend = isSelf || relation?.status === 'accepted';
+    if (!isFriend && !person.visible) return res.status(404).json({ error: 'Användaren hittades inte.' });
+    const rows = (await loadWorkoutRows([personId])).get(personId) || [];
+    const month = summarize(rows, monthStart());
+    const week = summarize(rows, weekStart());
+    const all = summarize(rows);
+    const result = {
+      id: personId,
+      name: person.name,
+      level: isFriend ? 'friend' : 'public',
+      isSelf,
+      relation: relation ? { id: relation.id, status: relation.status, direction: relation.direction } : null,
+      stats: { total: all.workouts, days: all.days, cardioKm: all.cardioKm, volume: all.volume, week: week.workouts, month: month.workouts, streak: currentStreak(rows) },
+      badges: computeBadges(rows)
+    };
+    if (isFriend) {
+      const records = new Map();
+      rows.filter(row => row.workout_type !== 'cardio').forEach(row => {
+        const key = row.exercise.toLowerCase();
+        const weight = Number(row.weight);
+        if (!records.has(key) || weight > records.get(key).weight) records.set(key, { exercise: row.exercise, weight, reps: row.reps });
+      });
+      result.records = [...records.values()].sort((a, b) => b.weight - a.weight).slice(0, 8);
+      result.recent = rows.slice(0, 5).map(row => row.workout_type === 'cardio'
         ? { date: dateOf(row), exercise: row.exercise, detail: `${Number(row.distance_km)} km på ${Number(row.duration_minutes)} min` }
-        : { date: dateOf(row), exercise: row.exercise, detail: `${row.sets} × ${row.reps} @ ${Number(row.weight)} kg` })
-    });
+        : { date: dateOf(row), exercise: row.exercise, detail: `${row.sets} × ${row.reps} @ ${Number(row.weight)} kg` });
+      if (!isSelf) {
+        const { rows: sent } = await pool.query('SELECT kind FROM cheers WHERE from_user = $1 AND to_user = $2 AND cheer_date = CURRENT_DATE', [req.user.id, personId]);
+        result.cheeredToday = sent.map(row => row.kind);
+        result.compare = { me: { ...summarize((await loadWorkoutRows([req.user.id])).get(req.user.id) || [], weekStart()) }, them: week };
+      }
+    }
+    res.json(result);
+  } catch (error) { next(error); }
+});
+app.post('/api/cheers', requireUser, async (req, res, next) => {
+  try {
+    const toUserId = Number(req.body?.toUserId) || 0;
+    const kind = String(req.body?.kind || '');
+    if (!cheerKinds.has(kind) || toUserId === req.user.id) return res.status(400).json({ error: 'Ogiltig hälsning.' });
+    if (!(await acceptedFriendIds(req.user.id)).includes(toUserId)) return res.status(403).json({ error: 'Du kan bara skicka hälsningar till vänner.' });
+    const result = await pool.query('INSERT INTO cheers (from_user, to_user, kind) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [req.user.id, toUserId, kind]);
+    if (!result.rowCount) return res.status(409).json({ error: 'Du har redan skickat den hälsningen idag.' });
+    res.status(201).json({ ok: true });
+  } catch (error) { next(error); }
+});
+app.get('/api/cheers', requireUser, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT c.kind, c.created_at, ${nameSql} AS name, c.from_user FROM cheers c JOIN users u ON u.id = c.from_user
+       WHERE c.to_user = $1 ORDER BY c.created_at DESC LIMIT 15`, [req.user.id]);
+    res.json({ cheers: rows.map(row => ({ kind: row.kind, name: row.name, fromUserId: row.from_user, createdAt: row.created_at })) });
+  } catch (error) { next(error); }
+});
+app.get('/api/leaderboard', requireUser, async (req, res, next) => {
+  try {
+    const period = req.query.period === 'month' ? 'month' : 'week';
+    const since = period === 'month' ? monthStart() : weekStart();
+    const ids = [req.user.id, ...await acceptedFriendIds(req.user.id)];
+    const [{ rows: users }, grouped] = await Promise.all([
+      pool.query(`SELECT u.id, ${nameSql} AS name FROM users u WHERE u.id = ANY($1::int[])`, [ids]),
+      loadWorkoutRows(ids)
+    ]);
+    res.json({ period, since, entries: users.map(user => {
+      const rows = grouped.get(user.id) || [];
+      return { userId: user.id, name: user.name, isMe: user.id === req.user.id, ...summarize(rows, since), streak: currentStreak(rows) };
+    }) });
+  } catch (error) { next(error); }
+});
+app.get('/api/feed', requireUser, async (req, res, next) => {
+  try {
+    const ids = await acceptedFriendIds(req.user.id);
+    if (!ids.length) return res.json({ items: [] });
+    const { rows } = await pool.query(
+      `SELECT w.user_id, ${nameSql} AS name, w.date, w.exercise, w.sets, w.reps, w.weight, w.workout_type, w.distance_km, w.duration_minutes
+       FROM workouts w JOIN users u ON u.id = w.user_id WHERE w.user_id = ANY($1::int[])
+       ORDER BY w.date DESC, w.workout_time DESC NULLS LAST LIMIT 15`, [ids]);
+    res.json({ items: rows.map(row => ({
+      userId: row.user_id,
+      name: row.name,
+      date: dateOf(row),
+      exercise: row.exercise,
+      detail: row.workout_type === 'cardio' ? `${Number(row.distance_km)} km på ${Number(row.duration_minutes)} min` : `${row.sets} × ${row.reps} @ ${Number(row.weight)} kg`
+    })) });
   } catch (error) { next(error); }
 });
 app.delete('/api/account', requireUser, async (req, res, next) => {
