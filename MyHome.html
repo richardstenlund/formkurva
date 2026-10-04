@@ -8,7 +8,7 @@
 	<link rel="stylesheet" href="formkurva.css?v=2">
 	<style>
 		.stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; margin: 0 0 26px; }
-		.stat-card { position: relative; min-height: 126px; padding: 21px; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(245,249,246,.95)); box-shadow: var(--shadow); border-left: 4px solid rgba(31,91,74,.16); }
+		.stat-card { position: relative; min-height: 126px; padding: 21px; overflow: hidden; border: 1px solid var(--mint); border-radius: 18px; background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(245,249,246,.95)); box-shadow: var(--shadow); border-left: 4px solid rgba(31,91,74,.16); }
 		.stat-card.highlight { background: linear-gradient(135deg, var(--green) 0%, #2c6d5d 100%); color: white; border-color: var(--green); border-left-color: var(--yellow); }
 		.stat-card::after { content: ''; position: absolute; right: -19px; bottom: -32px; width: 90px; height: 90px; border: 17px solid rgba(31,91,74,.08); border-radius: 50%; opacity: 1; }
 		.stat-card.highlight::after { border-color: rgba(255,255,255,.12); }
@@ -18,14 +18,14 @@
 		.stat-change { color: #438367; font-size: 11px; font-weight: 600; }
 		.highlight .stat-change { color: var(--yellow); }
 		.content-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(310px, .85fr); gap: 20px; align-items: start; }
-		.panel { padding: 25px; border: 1px solid var(--line); border-radius: 18px; background: rgba(255,255,255,.8); box-shadow: var(--shadow); backdrop-filter: blur(8px); }
+		.panel { padding: 25px; border: 1px solid var(--mint); border-radius: 18px; background: rgba(255,255,255,.8); box-shadow: var(--shadow); backdrop-filter: blur(8px); }
 		.panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 25px; }
 		.panel-subtitle { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
 		.periods { display: flex; gap: 4px; padding: 3px; border-radius: 7px; background: var(--paper); }
 		.period { padding: 6px 9px; border: 0; border-radius: 5px; background: transparent; color: var(--muted); font-size: 11px; }
 		.periods select { padding: 6px 8px; border: 0; border-radius: 5px; background: transparent; color: var(--green); font: inherit; font-size: 11px; font-weight: 700; }
 		.period.active { background: white; color: var(--green); box-shadow: 0 2px 7px rgba(0,0,0,.08); font-weight: 700; }
-		.chart { display: flex; align-items: flex-end; gap: 12px; height: 205px; padding: 13px 6px 27px; border-bottom: 1px solid var(--line); background: repeating-linear-gradient(to bottom, transparent 0, transparent 50px, #edf0eb 51px); }
+		.chart { display: flex; align-items: flex-end; gap: 12px; height: 205px; padding: 13px 6px 27px; border-bottom: 1px solid var(--mint); background: repeating-linear-gradient(to bottom, transparent 0, transparent 50px, #edf0eb 51px); }
 		.bar-wrap { display: flex; flex: 1; align-items: flex-end; height: 100%; min-width: 20px; }
 		.bar { width: 100%; min-height: 8px; border-radius: 5px 5px 2px 2px; background: var(--mint); transition: height .4s ease; }
 		.bar.current { background: var(--orange); }
@@ -47,24 +47,24 @@
 		.workout-advanced > .field-grid, .workout-advanced > label { margin-top: 10px; }
 		.quick-repeat { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-bottom: 12px; }
 		.quick-repeat-label { color: var(--muted); font-size: 11px; font-weight: 600; }
-		.quick-repeat-chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--green); font-size: 11px; font-weight: 700; cursor: pointer; }
+		.quick-repeat-chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px; border: 1px solid var(--mint); border-radius: 999px; background: var(--paper); color: var(--green); font-size: 11px; font-weight: 700; cursor: pointer; }
 		.quick-repeat-chip:hover { border-color: var(--green); }
 		.set-editor { display: grid; gap: 8px; }
 		.set-editor-heading { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 11px; font-weight: 700; }
-		.set-editor-heading button { padding: 6px 9px; border: 1px solid var(--line); border-radius: 7px; background: white; color: var(--green); font-size: 11px; font-weight: 700; cursor: pointer; }
+		.set-editor-heading button { padding: 6px 9px; border: 1px solid var(--mint); border-radius: 7px; background: white; color: var(--green); font-size: 11px; font-weight: 700; cursor: pointer; }
 		.set-entry { display: grid; grid-template-columns: 32px minmax(80px, 1fr) minmax(80px, 1fr) 34px; align-items: end; gap: 8px; }
 		.set-entry-number { padding-bottom: 12px; color: var(--green); font-size: 12px; font-weight: 700; text-align: center; }
 		.set-entry label { gap: 4px; }
 		.set-entry input { padding: 8px; }
-		.set-remove { width: 32px; height: 34px; border: 1px solid var(--line); border-radius: 7px; background: white; color: var(--muted); cursor: pointer; }
+		.set-remove { width: 32px; height: 34px; border: 1px solid var(--mint); border-radius: 7px; background: white; color: var(--muted); cursor: pointer; }
 		.friend-form { display: flex; gap: 10px; margin-bottom: 14px; }
-		.friend-form input { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); }
-		.friend-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+		.friend-form input { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--mint); border-radius: 8px; background: var(--white); color: var(--ink); }
+		.friend-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--mint); font-size: 13px; }
 		.friend-row small { display: block; color: var(--muted); }
 		.friend-row-actions { display: flex; gap: 6px; }
-		.friend-form select { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); }
+		.friend-form select { padding: 10px 12px; border: 1px solid var(--mint); border-radius: 8px; background: var(--white); color: var(--ink); }
 		.community-toggle { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; margin-bottom: 12px; }
-		.person-panel { margin-top: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; }
+		.person-panel { margin-top: 14px; padding: 14px; border: 1px solid var(--mint); border-radius: 10px; }
 		.person-panel[hidden] { display: none; }
 		.person-header { display: flex; align-items: center; gap: 12px; }
 		.person-header > div:nth-child(2) { flex: 1; }
@@ -82,33 +82,54 @@
 		.nav-count[hidden] { display: none; }
 		.team-bar { height: 14px; border-radius: 999px; background: var(--paper); overflow: hidden; margin: 8px 0; }
 		.team-bar > span { display: block; height: 100%; background: var(--ink); }
-		.cheer-message { width: 100%; box-sizing: border-box; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); }
+		.cheer-message { width: 100%; box-sizing: border-box; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--mint); border-radius: 8px; background: var(--white); color: var(--ink); }
 		.group-box { margin-bottom: 14px; }
-		.chat-panel { margin: 8px 0; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
+		.chat-panel { margin: 8px 0; padding: 10px; border: 1px solid var(--mint); border-radius: 10px; }
 		.chat-log { max-height: 240px; overflow-y: auto; margin-bottom: 8px; font-size: 13px; }
-		.chat-line { padding: 6px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+		.chat-line { padding: 6px 0; border-bottom: 1px solid var(--mint); overflow-wrap: anywhere; }
 		.chat-line small { color: var(--muted); }
 		.chat-me strong { color: var(--ink); }
+		.timeline-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+		.timeline-controls select { flex: 1; min-width: 160px; padding: 9px 12px; border: 1px solid var(--mint); border-radius: 8px; background: var(--white); color: var(--ink); text-transform: capitalize; }
+		.timeline-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 12px 0; }
+		.timeline-card { padding: 12px; border-radius: 10px; background: var(--paper); font-size: 11px; color: var(--muted); }
+		.timeline-card strong { display: block; font-size: 20px; color: var(--ink); }
+		.timeline-card small { display: block; margin-top: 2px; font-weight: 700; }
+		.timeline-up { color: #438367; }
+		.timeline-down { color: #c15a1f; }
+		.timeline-calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin: 10px 0; }
+		.timeline-day { aspect-ratio: 1; display: grid; place-items: center; border-radius: 6px; background: var(--paper); font-size: 10px; color: var(--muted); }
+		.timeline-day.has { background: var(--green); color: var(--paper); font-weight: 700; }
+		.timeline-day.heavy { background: var(--orange); }
+		.timeline-day-head { text-align: center; font-size: 10px; color: var(--muted); font-weight: 700; }
+		.timeline-bars { display: grid; grid-template-columns: repeat(12, 1fr); gap: 6px; align-items: end; height: 140px; margin: 14px 0 4px; }
+		.timeline-bar { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; padding: 0; border: 0; background: transparent; cursor: pointer; font-size: 10px; color: var(--muted); }
+		.timeline-bar span { display: block; width: 100%; min-height: 3px; border-radius: 4px 4px 0 0; background: var(--green); }
+		.timeline-bar.empty span { background: var(--mint); }
+		.timeline-bar.current span { background: var(--orange); }
+		.timeline-day-list details { padding: 8px 0; border-bottom: 1px solid var(--mint); font-size: 13px; }
+		.timeline-day-list summary { cursor: pointer; font-weight: 700; }
+		.timeline-day-list ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 12px; }
 		.leaderboard { list-style: none; margin: 0; padding: 0; }
-		.leaderboard-row { display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid var(--line); font-size: 14px; }
+		.leaderboard-row { display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid var(--mint); font-size: 14px; }
 		.leaderboard-me { background: var(--paper); border-radius: 8px; }
 		.leaderboard-place { text-align: center; font-size: 18px; }
-		.friend-summary { margin-top: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; }
+		.friend-summary { margin-top: 14px; padding: 14px; border: 1px solid var(--mint); border-radius: 10px; }
 		.friend-summary[hidden] { display: none; }
 		.friend-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin: 10px 0; }
 		.friend-stats div { padding: 10px; border-radius: 8px; background: var(--paper); font-size: 11px; color: var(--muted); }
 		.friend-stats strong { display: block; font-size: 18px; color: var(--ink); }
-		.cardio-fields { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--white); }
+		.cardio-fields { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--mint); border-radius: 10px; background: var(--white); }
 		.cardio-fields[hidden] { display: none; }
 		.cardio-fields .field-grid { align-items: end; }
 		.set-editor[hidden] { display: none; }
 		.cardio-metrics { padding: 10px; border-radius: 8px; background: var(--paper); color: var(--muted); font-size: 12px; }
 		.cardio-metrics strong { color: var(--green); }
-		.workout-kind-select { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); }
-		.template-controls { display: grid; gap: 9px; margin: 0 0 14px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+		.workout-kind-select { padding: 10px 12px; border: 1px solid var(--mint); border-radius: 8px; background: var(--white); color: var(--ink); }
+		.template-controls { display: grid; gap: 9px; margin: 0 0 14px; padding: 12px; border: 1px solid var(--mint); border-radius: 10px; background: var(--paper); }
 		.template-controls > div { display: flex; flex-wrap: wrap; gap: 8px; }
-		.template-controls input, .template-controls select { min-width: 0; flex: 1; padding: 9px; border: 1px solid var(--line); border-radius: 7px; background: white; color: var(--ink); }
-		.template-controls button { padding: 8px 11px; border: 1px solid var(--line); border-radius: 7px; background: white; color: var(--green); font-size: 11px; font-weight: 700; cursor: pointer; }
+		.template-controls input, .template-controls select { min-width: 0; flex: 1; padding: 9px; border: 1px solid var(--mint); border-radius: 7px; background: white; color: var(--ink); }
+		.template-controls button { padding: 8px 11px; border: 1px solid var(--mint); border-radius: 7px; background: white; color: var(--green); font-size: 11px; font-weight: 700; cursor: pointer; }
 		.template-status, .backup-status { margin: 0; color: var(--muted); font-size: 11px; }
 		.backup-status { margin-top: 12px; line-height: 1.5; }
 		.secondary-insights { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin: 0 0 24px; }
@@ -116,9 +137,9 @@
 		.suggestion-result strong { color: var(--green); }
 		.suggestion-result button { display: block; margin-top: 10px; padding: 8px 10px; border: 0; border-radius: 7px; background: var(--green); color: white; font-weight: 700; cursor: pointer; }
 		.recovery-list { display: grid; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
-		.recovery-list li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+		.recovery-list li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--mint); font-size: 12px; }
 		.recovery-list small { color: var(--muted); text-align: right; }
-		.weight-trend { margin-top: 22px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+		.weight-trend { margin-top: 22px; padding: 16px; border: 1px solid var(--mint); border-radius: 12px; background: var(--paper); }
 		.weight-trend-chart { display: block; width: 100%; height: 150px; margin-top: 10px; overflow: visible; }
 		.weight-trend-summary { color: var(--muted); font-size: 12px; }
 		.weight-trend-summary strong { color: var(--green); }
@@ -159,7 +180,7 @@
 		.profile-identity p { margin: 5px 0; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 		.profile-form { display: grid; gap: 14px; max-width: 620px; }
 		.profile-form select { width: 100%; padding: 11px 12px; border: 1px solid #d3dfd4; border-radius: 7px; background: white; color: var(--ink); font: inherit; }
-		[data-theme="dark"] input, [data-theme="dark"] textarea, [data-theme="dark"] select { border-color: var(--line); background: #1b2923; color: var(--ink); }
+		[data-theme="dark"] input, [data-theme="dark"] textarea, [data-theme="dark"] select { border-color: var(--mint); background: #1b2923; color: var(--ink); }
 		[data-theme="dark"] .profile-form input[readonly] { background: #18231f; }
 		[data-theme="dark"] .health-note { background: #493f25; color: #f0d991; }
 		[data-theme="dark"] .reminder-status { background: #3e3926; color: #efd98f; }
@@ -196,17 +217,17 @@
 		.admin-table th { padding: 0 10px 12px; color: var(--muted); font-size: 10px; text-align: left; text-transform: uppercase; }
 		.admin-table td { padding: 13px 10px; border-top: 1px solid #edf0ec; }
 		.admin-table th:first-child, .admin-table td:first-child { padding-left: 0; }
-		.role-select { padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--white); color: var(--ink); font-size: 11px; }
+		.role-select { padding: 7px 9px; border: 1px solid var(--mint); border-radius: 6px; background: var(--white); color: var(--ink); font-size: 11px; }
 		.admin-message { margin-top: 13px; color: var(--muted); font-size: 11px; }
 		.dashboard-insights { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin: 0 0 24px; }
 		.insight-card { min-width: 0; }
 		.badge-list, .pr-list, .plan-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
-		.badge-item { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #f8fbf8; }
+		.badge-item { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--mint); border-radius: 10px; background: #f8fbf8; }
 		.badge-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: var(--mint); font-size: 19px; }
 		.badge-item strong { display: block; font-size: 12px; }
 		.badge-item small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
 		.exercise-medals { display: grid; gap: 9px; }
-		.exercise-medal { display: flex; align-items: center; gap: 11px; padding: 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--white); }
+		.exercise-medal { display: flex; align-items: center; gap: 11px; padding: 11px; border: 1px solid var(--mint); border-radius: 10px; background: var(--white); }
 		.exercise-medal-icon { display: grid; place-items: center; flex: 0 0 36px; width: 36px; height: 36px; border-radius: 50%; background: var(--paper); font-size: 21px; }
 		.exercise-medal-details { min-width: 0; flex: 1; }
 		.exercise-medal-details strong, .exercise-medal-details small { display: block; }
@@ -216,7 +237,7 @@
 		.medal-guide { margin: 0 0 12px; color: var(--muted); font-size: 11px; line-height: 1.5; }
 		.badge-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 		.badge-actions .export-button { font-size: 10px; padding: 7px 10px; }
-		.medal-catalog { margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: #f8fbf8; font-size: 11px; color: var(--muted); line-height: 1.6; }
+		.medal-catalog { margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--mint); border-radius: 10px; background: #f8fbf8; font-size: 11px; color: var(--muted); line-height: 1.6; }
 		.medal-catalog[hidden] { display: none; }
 		.medal-catalog h3 { margin: 0 0 6px; color: var(--ink); font-size: 12px; }
 		.medal-catalog h3:not(:first-child) { margin-top: 12px; }
@@ -227,27 +248,27 @@
 		.level-heading { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
 		.level-heading strong { font-size: 15px; }
 		.level-heading small { color: var(--muted); font-size: 11px; }
-		.level-bar-track { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; }
+		.level-bar-track { height: 10px; border-radius: 999px; background: var(--mint); overflow: hidden; }
 		.level-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--green), var(--orange)); transition: width .4s ease; }
 		.week-summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
-		.week-summary-item { text-align: center; padding: 8px 4px; border: 1px solid var(--line); border-radius: 10px; }
+		.week-summary-item { text-align: center; padding: 8px 4px; border: 1px solid var(--mint); border-radius: 10px; }
 		.week-summary-item strong { display: block; font-size: 16px; }
 		.week-summary-item span { font-size: 10px; color: var(--muted); }
-		.challenge-block { border-top: 1px dashed var(--line); padding-top: 12px; }
+		.challenge-block { border-top: 1px dashed var(--mint); padding-top: 12px; }
 		.challenge-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px; font-weight: 700; }
 		.challenge-dots { display: flex; gap: 6px; }
-		.challenge-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line); }
+		.challenge-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--mint); }
 		.challenge-dot.done { background: var(--green); border-color: var(--green); }
 		.progress-panel { grid-column: 1 / -1; }
 		.progress-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 		[data-view].view-hidden { display: none !important; }
 		.heatmap-block { margin-top: 22px; }
 		.training-heatmap { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 1fr); gap: 4px; margin-top: 10px; overflow-x: auto; padding-bottom: 4px; }
-		.heatmap-cell { width: 15px; height: 15px; border-radius: 3px; background: var(--line); }
-		.heatmap-cell[data-level="1"] { background: color-mix(in srgb, var(--green) 35%, var(--line)); }
-		.heatmap-cell[data-level="2"] { background: color-mix(in srgb, var(--green) 65%, var(--line)); }
+		.heatmap-cell { width: 15px; height: 15px; border-radius: 3px; background: var(--mint); }
+		.heatmap-cell[data-level="1"] { background: color-mix(in srgb, var(--green) 35%, var(--mint)); }
+		.heatmap-cell[data-level="2"] { background: color-mix(in srgb, var(--green) 65%, var(--mint)); }
 		.heatmap-cell[data-level="3"] { background: var(--green); }
-		.progress-chart { display: flex; align-items: flex-end; gap: 8px; min-height: 180px; padding: 16px 4px 0; border-bottom: 1px solid var(--line); }
+		.progress-chart { display: flex; align-items: flex-end; gap: 8px; min-height: 180px; padding: 16px 4px 0; border-bottom: 1px solid var(--mint); }
 		.progress-bar-wrap { display: grid; flex: 1; grid-template-rows: 1fr auto; gap: 8px; height: 160px; min-width: 0; text-align: center; }
 		.progress-bar-track { display: flex; align-items: flex-end; justify-content: center; height: 100%; }
 		.progress-bar { width: min(100%, 28px); min-height: 3px; border-radius: 5px 5px 1px 1px; background: var(--mint); }
@@ -266,7 +287,7 @@
 		.pr-list small, .plan-list small { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
 		.pr-value, .plan-badge { flex: 0 0 auto; color: var(--green); font-size: 12px; font-weight: 700; text-align: right; white-space: nowrap; }
 		.focus-picker { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
-		.focus-chip { padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--muted); font-size: 11px; font-weight: 700; cursor: pointer; transition: all .15s ease; }
+		.focus-chip { padding: 7px 12px; border: 1px solid var(--mint); border-radius: 999px; background: var(--paper); color: var(--muted); font-size: 11px; font-weight: 700; cursor: pointer; transition: all .15s ease; }
 		.focus-chip:hover { border-color: var(--green); }
 		.focus-chip.active { background: var(--green); border-color: var(--green); color: white; }
 		.pr-score { color: var(--green); font-size: 12px; font-weight: 700; }
@@ -292,6 +313,7 @@
 				<button class="nav-item" data-nav="logga" onclick="showView('logga')"><span class="nav-icon">＋</span> Logga träning & mätning</button>
 				<button class="nav-item" data-nav="mal-halsa" onclick="showView('mal-halsa')"><span class="nav-icon">◎</span> Mål & hälsa</button>
 				<button class="nav-item" data-nav="profil" onclick="showView('profil')"><span class="nav-icon">◉</span> Profil</button>
+				<button class="nav-item" data-nav="historik" onclick="showView('historik')"><span class="nav-icon">⟲</span> Historik</button>
 				<button class="nav-item" data-nav="community" onclick="showView('community')"><span class="nav-icon">☻</span> Community <span class="nav-count" id="cheer-count" hidden></span></button>
 				<a class="nav-item admin-only" id="admin-nav" href="admin.html"><span class="nav-icon">⚙</span> Admin</a>
 			</nav>
@@ -394,7 +416,7 @@
 					<section class="panel feature-panel"><div class="panel-heading"><div><h2>Anteckning & progressbild</h2><p class="panel-subtitle">Spara dagens känsla tillsammans med mätningen.</p></div></div><form class="note-form" id="note-form"><label>Dagens anteckning<textarea name="note" id="daily-note" placeholder="Träning, energi, sömn eller annat..."></textarea></label><label class="photo-drop">Lägg till progressbild<input type="file" id="progress-photo" accept="image/*"><span>Välj en bild från enheten</span></label><img class="photo-preview" id="photo-preview" alt="Förhandsvisning av progressbild"><button class="save-button" type="submit">Spara anteckning <span>→</span></button></form></section>
 				</div>
 
-				<section class="panel profile-panel" id="community-section" data-view="community"><div class="panel-heading"><div><h2>Community</h2><p class="panel-subtitle">Hitta andra Formkurva-användare, bli vänner, skicka peppning och tävla mot varandra. Kroppsmått och e-post delas aldrig.</p></div></div><label class="community-toggle"><input type="checkbox" id="community-visible" checked> Visa mig i communityn (andra kan hitta mig och se mina medaljer). Vänner ser alltid min träning.</label><button class="export-button" type="button" id="notify-toggle">🔔 Slå på notiser</button><div class="person-panel" id="person-panel" hidden></div></section>
+							<section class="panel" id="timeline-section" data-view="historik"><div class="panel-heading"><div><h2>Historik</h2><p class="panel-subtitle">Bläddra bakåt i tiden och se sammanfattningar, personbästa och milstolpar för varje månad och år.</p></div></div><div class="timeline-controls"><button class="export-button" type="button" id="timeline-prev" aria-label="Föregående">‹</button><select id="timeline-select" aria-label="Välj period"></select><button class="export-button" type="button" id="timeline-next" aria-label="Nästa">›</button><div class="periods"><button class="period active" type="button" data-timeline-mode="month">Månad</button><button class="period" type="button" data-timeline-mode="year">År</button></div></div><div id="timeline-content"></div></section>			<section class="panel profile-panel" id="community-section" data-view="community"><div class="panel-heading"><div><h2>Community</h2><p class="panel-subtitle">Hitta andra Formkurva-användare, bli vänner, skicka peppning och tävla mot varandra. Kroppsmått och e-post delas aldrig.</p></div></div><label class="community-toggle"><input type="checkbox" id="community-visible" checked> Visa mig i communityn (andra kan hitta mig och se mina medaljer). Vänner ser alltid min träning.</label><button class="export-button" type="button" id="notify-toggle">🔔 Slå på notiser</button><div class="person-panel" id="person-panel" hidden></div></section>
 				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Hitta användare</h2></div></div><div class="friend-form"><input type="search" id="community-search" maxlength="50" placeholder="Sök på namn"></div><div id="community-list"><div class="empty-state">Logga in för att se communityn.</div></div></section>
 				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Tävling</h2><p class="panel-subtitle">Du mot dina vänner.</p></div></div><div class="friend-form"><select id="leaderboard-period"><option value="week">Denna vecka</option><option value="month">Denna månad</option></select><select id="leaderboard-metric"><option value="workouts">Antal pass</option><option value="days">Träningsdagar</option><option value="cardioKm">Distans (kondition)</option><option value="volume">Total lyftvolym</option><option value="streak">Streak</option></select></div><ol class="leaderboard" id="leaderboard-list"></ol></section>
 				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Lagmål</h2><p class="panel-subtitle">Gemensamt mål för dig och dina vänner – ni tränar tillsammans.</p></div></div><div id="team-goal"></div></section>
@@ -1267,7 +1289,7 @@
 			const y = value => 145 - (value - min) / (max - min) * 112;
 			[0, 1, 2].forEach(index => {
 				const gridY = 35 + index * 55;
-				addSvg('line', { x1: 35, y1: gridY, x2: 590, y2: gridY, stroke: 'var(--line)', 'stroke-width': 1 });
+				addSvg('line', { x1: 35, y1: gridY, x2: 590, y2: gridY, stroke: 'var(--mint)', 'stroke-width': 1 });
 			});
 			addSvg('polyline', { points: points.map((item, index) => `${x(index)},${y(Number(item[metric]))}`).join(' '), fill: 'none', stroke: 'var(--green)', 'stroke-width': 3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
 			points.forEach((item, index) => {
@@ -1675,7 +1697,193 @@
 			const change = Number(current) - Number(previous);
 			return (change > 0 ? '+' : '') + change.toLocaleString('sv-SE', { maximumFractionDigits: 1 }) + ' ' + unit + ' sedan sist';
 		}
-		function render() {
+		let timelineMode = 'month';
+		let timelineKey = '';
+		const monthLabel = key => new Date(key + '-01T12:00:00').toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' });
+		function workoutVolumeKg(workout) { return isCardioWorkout(workout) ? 0 : getWorkoutSetDetails(workout).reduce((total, set) => total + (Number(set.reps) || 0) * (Number(set.weight) || 0), 0); }
+		function summarizeWorkouts(list) {
+			let volume = 0, km = 0, minutes = 0, cardioCount = 0;
+			list.forEach(workout => {
+				if (isCardioWorkout(workout)) { km += Number(workout.distance_km) || 0; minutes += Number(workout.duration_minutes) || 0; cardioCount += 1; }
+				else volume += workoutVolumeKg(workout);
+			});
+			return { count: list.length, days: new Set(list.map(workout => workout.date)).size, volume: Math.round(volume), km: Math.round(km * 10) / 10, minutes: Math.round(minutes), cardioCount };
+		}
+		function longestStreak(dates) {
+			const days = [...new Set(dates)].sort();
+			let best = 0, run = 0, previous = null;
+			days.forEach(day => {
+				const time = Date.parse(day + 'T12:00:00Z');
+				run = previous !== null && Math.round((time - previous) / 86400000) === 1 ? run + 1 : 1;
+				previous = time; best = Math.max(best, run);
+			});
+			return best;
+		}
+		function timelineCard(label, value, previous, unit = '') {
+			const card = el('div', 'timeline-card');
+			card.append(el('strong', '', value.toLocaleString('sv-SE') + unit), label);
+			if (previous !== undefined && previous !== null && (previous > 0 || value > 0)) {
+				const diff = value - previous;
+				const text = previous > 0 ? `${diff >= 0 ? '▲' : '▼'} ${Math.abs(Math.round(diff / previous * 100))} % mot förra` : '▲ ny';
+				card.append(el('small', diff >= 0 ? 'timeline-up' : 'timeline-down', diff === 0 ? 'Oförändrat mot förra' : text));
+			}
+			return card;
+		}
+		function periodRecords(list, beforeDate) {
+			const prior = new Map();
+			workouts.filter(workout => !isCardioWorkout(workout) && workout.date < beforeDate).forEach(workout => {
+				const key = workout.exercise.trim().toLowerCase();
+				prior.set(key, Math.max(prior.get(key) || 0, Number(workout.weight) || 0));
+			});
+			const records = [];
+			const running = new Map(prior);
+			[...list].filter(workout => !isCardioWorkout(workout)).sort((a, b) => a.date.localeCompare(b.date)).forEach(workout => {
+				const key = workout.exercise.trim().toLowerCase();
+				const weight = Number(workout.weight) || 0;
+				const before = running.get(key);
+				if (weight > (before || 0)) {
+					const existing = records.findIndex(record => record.key === key);
+					const entry = { key, exercise: workout.exercise.trim(), weight, date: workout.date, previous: prior.get(key) || 0, first: !prior.has(key) };
+					if (existing >= 0) records[existing] = entry; else records.push(entry);
+					running.set(key, weight);
+				}
+			});
+			return records.sort((a, b) => b.weight - a.weight);
+		}
+		function periodMilestones(from, to) {
+			const sorted = [...workouts].sort((a, b) => a.date.localeCompare(b.date));
+			const found = [];
+			const countSteps = [10, 25, 50, 100, 250, 500, 1000];
+			sorted.forEach((workout, index) => { if (workout.date >= from && workout.date <= to && countSteps.includes(index + 1)) found.push(`🎯 Pass nummer ${index + 1} loggades ${new Date(workout.date + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}`); });
+			let km = 0;
+			sorted.filter(isCardioWorkout).forEach(workout => {
+				const before = km; km += Number(workout.distance_km) || 0;
+				[10, 50, 100, 250, 500, 1000].forEach(step => { if (before < step && km >= step && workout.date >= from && workout.date <= to) found.push(`🏃 Du passerade ${step} km total konditionsdistans`); });
+			});
+			return found;
+		}
+		function measurementChange(from, to) {
+			const inRange = measurements.filter(item => item.date >= from && item.date <= to).sort((a, b) => a.date.localeCompare(b.date));
+			if (inRange.length < 1) return [];
+			const first = inRange[0], last = inRange[inRange.length - 1];
+			return [['weight', 'Vikt', 'kg'], ['waist', 'Midja', 'cm'], ['chest', 'Bröst', 'cm'], ['arm', 'Överarm', 'cm'], ['thigh', 'Lår', 'cm'], ['hip', 'Höft', 'cm']]
+				.filter(([key]) => Number(last[key]) > 0)
+				.map(([key, label, unit]) => {
+					const start = Number(first[key]) > 0 ? Number(first[key]) : null;
+					const end = Number(last[key]);
+					const diff = start === null || inRange.length < 2 ? null : Math.round((end - start) * 10) / 10;
+					return [label, `${formatNumber(end, unit)}${diff === null ? '' : ` (${diff > 0 ? '+' : ''}${diff.toLocaleString('sv-SE')} ${unit})`}`];
+				});
+		}
+		function renderPeriod(from, to, previousFrom, previousTo, content, title) {
+			const list = workouts.filter(workout => workout.date >= from && workout.date <= to);
+			const stats = summarizeWorkouts(list);
+			const previous = summarizeWorkouts(workouts.filter(workout => workout.date >= previousFrom && workout.date <= previousTo));
+			if (!list.length && !measurements.some(item => item.date >= from && item.date <= to)) { content.append(emptyState(`Ingen träning eller mätning loggad ${title}.`)); return; }
+			const cards = el('div', 'timeline-cards');
+			cards.append(timelineCard('Träningspass', stats.count, previous.count), timelineCard('Aktiva dagar', stats.days, previous.days), timelineCard('Längsta svit (dagar)', longestStreak(list.map(workout => workout.date)), longestStreak(workouts.filter(workout => workout.date >= previousFrom && workout.date <= previousTo).map(workout => workout.date)), ''), timelineCard('Lyftvolym', stats.volume, previous.volume, ' kg'), timelineCard('Kondition', stats.km, previous.km, ' km'), timelineCard('Konditionstid', stats.minutes, previous.minutes, ' min'));
+			content.append(cards);
+			const records = periodRecords(list, from);
+			content.append(el('h4', '', `Personbästa (${records.length})`));
+			content.append(records.length ? simpleList(records.slice(0, 12).map(record => [`🏅 ${record.exercise}`, record.first ? `${record.weight} kg · första gången` : `${record.weight} kg (förut ${record.previous} kg)`])) : emptyState('Inga nya personbästa den här perioden.'));
+			const milestones = periodMilestones(from, to);
+			if (milestones.length) { content.append(el('h4', '', 'Milstolpar')); content.append(simpleList(milestones.map(text => [text, '']))); }
+			const counts = new Map();
+			list.forEach(workout => { const name = isCardioWorkout(workout) ? (cardioActivityNames[workout.cardio_activity] || 'Kondition') : workout.exercise.trim(); counts.set(name, (counts.get(name) || 0) + 1); });
+			if (counts.size) { content.append(el('h4', '', 'Mest tränat')); content.append(simpleList([...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, count]) => [name, `${count} pass`]))); }
+			const body = measurementChange(from, to);
+			if (body.length) { content.append(el('h4', '', 'Kroppsmått (senaste värde, förändring under perioden)')); content.append(simpleList(body)); }
+		}
+		function renderMonthDetail(key, content) {
+			const [year, month] = key.split('-').map(Number);
+			const from = `${key}-01`;
+			const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+			const to = `${key}-${String(lastDay).padStart(2, '0')}`;
+			const prevDate = new Date(Date.UTC(year, month - 2, 1));
+			const prevKey = prevDate.toISOString().slice(0, 7);
+			const prevLast = new Date(Date.UTC(year, month - 1, 0)).getUTCDate();
+			renderPeriod(from, to, `${prevKey}-01`, `${prevKey}-${String(prevLast).padStart(2, '0')}`, content, 'den här månaden');
+			const byDay = new Map();
+			workouts.filter(workout => workout.date >= from && workout.date <= to).forEach(workout => { if (!byDay.has(workout.date)) byDay.set(workout.date, []); byDay.get(workout.date).push(workout); });
+			if (!byDay.size) return;
+			content.append(el('h4', '', 'Kalender'));
+			const calendar = el('div', 'timeline-calendar');
+			['M', 'T', 'O', 'T', 'F', 'L', 'S'].forEach(day => calendar.append(el('div', 'timeline-day-head', day)));
+			const offset = (new Date(Date.UTC(year, month - 1, 1)).getUTCDay() + 6) % 7;
+			for (let blank = 0; blank < offset; blank += 1) calendar.append(el('div'));
+			for (let day = 1; day <= lastDay; day += 1) {
+				const date = `${key}-${String(day).padStart(2, '0')}`;
+				const sessions = byDay.get(date);
+				const cell = el('div', 'timeline-day' + (sessions ? ' has' : '') + (sessions && sessions.length > 1 ? ' heavy' : ''), String(day));
+				if (sessions) cell.title = `${sessions.length} pass`;
+				calendar.append(cell);
+			}
+			content.append(calendar, el('small', 'panel-subtitle', 'Grön = träning, orange = flera pass samma dag.'));
+			content.append(el('h4', '', 'Dag för dag'));
+			const dayList = el('div', 'timeline-day-list');
+			[...byDay.entries()].sort((a, b) => b[0].localeCompare(a[0])).forEach(([date, sessions]) => {
+				const details = el('details');
+				details.append(el('summary', '', `${new Date(date + 'T12:00:00').toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })} · ${sessions.length} pass`));
+				const items = el('ul');
+				sessions.forEach(workout => {
+					if (isCardioWorkout(workout)) items.append(el('li', '', `${cardioActivityNames[workout.cardio_activity] || 'Kondition'} (${cardioLocationNames[workout.cardio_location] || ''}): ${formatNumber(workout.distance_km, 'km')} på ${formatNumber(workout.duration_minutes, 'min')}`));
+					else { const sets = getWorkoutSetDetails(workout); items.append(el('li', '', `${workout.exercise}: ${sets.map(set => `${set.reps}×${set.weight} kg`).join(', ')}`)); }
+				});
+				details.append(items);
+				dayList.append(details);
+			});
+			content.append(dayList);
+		}
+		function renderYearDetail(year, content) {
+			const bars = el('div', 'timeline-bars');
+			const labels = el('div', 'timeline-bars');
+			const counts = Array.from({ length: 12 }, (_, index) => workouts.filter(workout => workout.date.startsWith(`${year}-${String(index + 1).padStart(2, '0')}`)).length);
+			const max = Math.max(1, ...counts);
+			const nowKey = new Date().toISOString().slice(0, 7);
+			counts.forEach((count, index) => {
+				const key = `${year}-${String(index + 1).padStart(2, '0')}`;
+				const bar = el('button', 'timeline-bar' + (count ? '' : ' empty') + (key === nowKey ? ' current' : ''));
+				bar.type = 'button'; bar.title = `${monthLabel(key)}: ${count} pass`;
+				const fill = el('span'); fill.style.height = Math.max(3, count / max * 100) + '%';
+				bar.append(el('small', '', count ? String(count) : ''), fill);
+				bar.addEventListener('click', () => { timelineMode = 'month'; timelineKey = key; renderTimeline(); });
+				bars.append(bar);
+				labels.append(el('small', 'timeline-day-head', new Date(key + '-01T12:00:00').toLocaleDateString('sv-SE', { month: 'short' })));
+			});
+			content.append(el('p', 'panel-subtitle', 'Tryck på en månad för att se den i detalj.'), bars, labels);
+			renderPeriod(`${year}-01-01`, `${year}-12-31`, `${year - 1}-01-01`, `${year - 1}-12-31`, content, 'det här året');
+		}
+		function renderTimeline() {
+			const content = document.getElementById('timeline-content');
+			const select = document.getElementById('timeline-select');
+			if (!content || !select) return;
+			const dates = [...workouts.map(workout => workout.date), ...measurements.map(item => item.date)].filter(Boolean).sort();
+			const nowKey = new Date().toISOString().slice(0, 7);
+			const firstKey = (dates[0] || nowKey).slice(0, 7);
+			const keys = [];
+			if (timelineMode === 'month') { for (let cursor = nowKey; cursor >= firstKey; ) { keys.push(cursor); const [year, month] = cursor.split('-').map(Number); cursor = new Date(Date.UTC(year, month - 2, 1)).toISOString().slice(0, 7); } }
+			else { for (let year = Number(nowKey.slice(0, 4)); year >= Number(firstKey.slice(0, 4)); year -= 1) keys.push(String(year)); }
+			if (!keys.includes(timelineKey)) timelineKey = keys.find(key => key.slice(0, timelineMode === 'month' ? 7 : 4) === (timelineMode === 'month' ? timelineKey.slice(0, 7) : timelineKey.slice(0, 4))) || keys[0];
+			select.replaceChildren(...keys.map(key => { const option = el('option', '', timelineMode === 'month' ? monthLabel(key) : key); option.value = key; return option; }));
+			select.value = timelineKey;
+			const index = keys.indexOf(timelineKey);
+			document.getElementById('timeline-prev').disabled = index >= keys.length - 1;
+			document.getElementById('timeline-next').disabled = index <= 0;
+			document.querySelectorAll('[data-timeline-mode]').forEach(button => button.classList.toggle('active', button.dataset.timelineMode === timelineMode));
+			content.replaceChildren();
+			if (!currentUser || (!workouts.length && !measurements.length)) { content.append(emptyState('Logga träning eller mätningar så byggs din historik upp här.')); return; }
+			if (timelineMode === 'month') renderMonthDetail(timelineKey, content); else renderYearDetail(timelineKey, content);
+		}
+		function stepTimeline(direction) {
+			const select = document.getElementById('timeline-select');
+			const next = select.options[select.selectedIndex - direction];
+			if (next) { timelineKey = next.value; renderTimeline(); }
+		}
+		document.getElementById('timeline-prev').addEventListener('click', () => stepTimeline(1));
+		document.getElementById('timeline-next').addEventListener('click', () => stepTimeline(-1));
+		document.getElementById('timeline-select').addEventListener('change', event => { timelineKey = event.target.value; renderTimeline(); });
+		document.querySelectorAll('[data-timeline-mode]').forEach(button => button.addEventListener('click', () => { timelineMode = button.dataset.timelineMode; timelineKey = timelineKey.slice(0, timelineMode === 'month' ? 7 : 4) || ''; if (timelineMode === 'month' && timelineKey.length === 4) timelineKey = (timelineKey === new Date().toISOString().slice(0, 4) ? new Date().toISOString().slice(0, 7) : timelineKey + '-12'); renderTimeline(); }));		function render() {
+			try { renderTimeline(); } catch (error) { console.error(error); }
 			renderExerciseMedals();
 			renderPRList();
 			renderTrainingPlan();

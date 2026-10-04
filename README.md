@@ -75,3 +75,5 @@ docker compose exec db pg_dump -U formkurva -d formkurva > formkurva.sql
 - Ändra inte `SESSION_DAYS` till en lång period utan att förstå risken.
 - Exponera inte PostgreSQL-porten mot internet.
 - Den inbyggda kontofunktionen använder hashade lösenord och sessionscookies. Konfigurera SMTP innan du litar på glömt-lösenord mot internet.
+
+Fliken **Historik** låter dig bläddra bakåt månad för månad eller år för år: sammanfattning med jämförelse mot föregående period, personbästa, milstolpar, kroppsmåttsförändring, kalender och dag-för-dag-lista.
