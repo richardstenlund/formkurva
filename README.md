@@ -4,6 +4,22 @@ Formkurva är en svensk webbapp för att logga och följa din träning och kropp
 
 Tekniken är Node.js, Express och PostgreSQL. Gränssnittet är en enda webbsida som även kan installeras som app på mobilen (PWA).
 
+## Snabbinstallation (kopiera och klistra in)
+
+På en ren Debian- eller Ubuntu-server (VM, LXC eller Raspberry Pi), logga in och klistra in **en** rad. Skriptet installerar allt själv (git, Docker, Formkurva) och ställer inga frågor:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/richardstenlund/formkurva/main/install.sh | sudo bash
+```
+
+Är du redan inloggad som root (vanligt i LXC) kan du köra utan `sudo`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/richardstenlund/formkurva/main/install.sh | bash
+```
+
+När det är klart visas adressen och en engångsinloggning (installationskonto). Öppna adressen, logga in och sidan guidar dig att skapa din egen administratör. Se [Första inloggningen](#första-inloggningen).
+
 ## Innehåll
 
 - [Vad sidan gör](#vad-sidan-gör)
@@ -103,16 +119,17 @@ Om du kör i en Proxmox-LXC måste containern ha funktionerna `nesting` och `key
 ### Steg 3a: Snabbinstallation med skript (rekommenderas)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/richardstenlund/formkurva/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/richardstenlund/formkurva/main/install.sh | sudo bash
 ```
 
-Skriptet:
-1. klonar projektet till `~/formkurva`,
-2. frågar efter admin-e-post, adminlösenord (minst 12 tecken) och adressen sidan ska nås på, t.ex. `http://192.168.1.61:3000`,
-3. skapar `.env` med slumpade databaslösenord,
-4. bygger och startar alla containrar och väntar tills databasen är klar.
+Skriptet kräver ingen inmatning och:
+1. installerar git, curl och Docker om de saknas (Debian/Ubuntu),
+2. klonar projektet till `/opt/formkurva`,
+3. skapar `.env` med slumpade lösenord för databasen och installationskontot, och adressen `http://<serverns IP>:3000`,
+4. bygger och startar alla containrar och väntar tills sidan svarar,
+5. skriver ut adress och inloggning.
 
-När det står "Klart!" öppnar du adressen i webbläsaren.
+Vill du styra något sätter du det före kommandot, t.ex. `APP_URL=https://formkurva.example.se curl ... | sudo -E bash`. Stöds: `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `APP_URL`, `FORMKURVA_DIR`. En befintlig `.env` lämnas alltid orörd.
 
 ### Steg 3b: Manuell installation
 
@@ -155,9 +172,23 @@ sudo ufw allow 8081/tcp   # bara om du vill nå Adminer från andra datorer
 ## Första inloggningen
 
 1. Öppna sidan och tryck **Logga in**.
-2. Logga in med `ADMIN_EMAIL` och `ADMIN_PASSWORD` från din `.env`. Adminkontot skapas automatiskt vid första start.
-3. Andra användare registrerar sig själva på inloggningsrutan. Du kan göra dem till administratörer under **Admin** i menyn.
-4. Ange din längd under **Profil** för att få BMI, och välj ett visningsnamn så att vänner kan hitta dig.
+2. Logga in med installationskontot (`ADMIN_EMAIL` och `ADMIN_PASSWORD`, skrivs ut av installationen och finns i `.env`).
+3. Sidan tvingar dig nu att **skapa en ny administratör** (e-post och lösenord på minst 12 tecken). Tills det är gjort går inget annat att göra med installationskontot.
+4. Logga in med din nya administratör. Högst upp visas en **röd varning** tills du tagit bort installationskontot. Tryck **Ta bort installationskontot** (eller radera det under Admin). Varningen visas för alla administratörer tills det är borttaget.
+5. Andra användare registrerar sig själva på inloggningsrutan. Du kan göra dem till administratörer under **Admin** i menyn.
+6. Ange din längd under **Profil** för att få BMI, och välj ett visningsnamn så att vänner kan hitta dig.
+
+Installationskontot skapas bara vid en helt ny databas. Befintliga installationer som uppdateras får inget sådant konto.
+
+## Säkerhet
+
+- Lösenord lagras hashade (scrypt) och sessioner ligger i HttpOnly-cookies.
+- Administratörslösenord måste vara minst 12 tecken, och installationskontot kan bara användas för att skapa en riktig admin.
+- Inloggning är begränsad till 8 försök per 15 minuter, och nya konton till 10 per timme och IP.
+- Skrivande API-anrop med fel `Origin` blockeras (CSRF-skydd).
+- Endast sidans egna filer serveras. Serverkod och `package.json` går inte att hämta.
+- Content-Security-Policy och övriga säkerhetshuvuden skickas. Med `SECURE_COOKIES=true` aktiveras även HSTS och Secure-cookies, vilket du bör göra bakom HTTPS.
+- Port 8081 (Adminer) bör inte nås från internet. Begränsa den med brandvägg.
 
 ## Inställningar (.env)
 

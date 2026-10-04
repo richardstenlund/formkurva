@@ -9,6 +9,7 @@ const port = Number(process.env.PORT || 3000);
 const sessionDays = Math.max(1, Number(process.env.SESSION_DAYS || 30));
 const secureCookies = process.env.SECURE_COOKIES === 'true';
 const loginWindowMs = 15 * 60 * 1000;
+const registerAttempts = new Map();
 const loginAttempts = new Map();
 const pool = new Pool({
   host: process.env.DB_HOST || 'db',
@@ -31,6 +32,7 @@ async function initDatabase() {
     profile_json TEXT NOT NULL DEFAULT '{}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`);
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS setup_account BOOLEAN NOT NULL DEFAULT false');
   await pool.query(`CREATE TABLE IF NOT EXISTS sessions (
     id VARCHAR(64) PRIMARY KEY,
     user_id INTEGER NOT NULL,
@@ -180,8 +182,10 @@ async function initDatabase() {
     if (rows.length) {
       await pool.query("UPDATE users SET role = 'admin' WHERE id = $1", [rows[0].id]);
     } else {
+      const { rows: [total] } = await pool.query('SELECT COUNT(*) AS count FROM users');
       const { salt, hash } = hashPassword(password);
-      await pool.query("INSERT INTO users (email, password_hash, password_salt, role, profile_json) VALUES ($1, $2, $3, 'admin', '{}')", [email, hash, salt]);
+      // Bara på en helt ny databas blir kontot ett tillfälligt installationskonto
+      await pool.query("INSERT INTO users (email, password_hash, password_salt, role, profile_json, setup_account) VALUES ($1, $2, $3, 'admin', '{}', $4)", [email, hash, salt, Number(total.count) === 0]);
     }
   }
 }
@@ -198,7 +202,7 @@ function parseProfile(value) {
   try { return JSON.parse(value || '{}'); } catch { return {}; }
 }
 function publicUser(user) {
-  return { id: user.id, email: user.email, role: user.role || 'user', profile: parseProfile(user.profile_json) };
+  return { id: user.id, email: user.email, role: user.role || 'user', setupAccount: !!user.setup_account, profile: parseProfile(user.profile_json) };
 }
 async function issuePasswordResetToken(userId) {
   const token = crypto.randomBytes(32).toString('hex');
@@ -270,6 +274,20 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'");
+  if (secureCookies) res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+  next();
+});
+// CSRF-skydd: skrivande API-anrop måste komma från samma adress som sidan
+app.use('/api', (req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+  const origin = req.headers.origin;
+  if (!origin) return next();
+  let originHost = '';
+  try { originHost = new URL(origin).host; } catch { return res.status(403).json({ error: 'Ogiltigt ursprung.' }); }
+  const allowed = new Set([req.headers.host, req.headers['x-forwarded-host']].filter(Boolean));
+  try { if (process.env.APP_URL) allowed.add(new URL(process.env.APP_URL).host); } catch {}
+  if (!allowed.has(originHost)) return res.status(403).json({ error: 'Anropet blockerades av säkerhetsskäl.' });
   next();
 });
 app.get('/formkurva.css', (req, res, next) => {
@@ -278,7 +296,23 @@ app.get('/formkurva.css', (req, res, next) => {
   });
 });
 app.get('/fomkurva.css', (req, res) => res.redirect(301, '/formkurva.css'));
-app.use(express.static(path.join(__dirname), { index: 'MyHome.html' }));
+const publicFiles = new Set(['MyHome.html', 'admin.html', 'reset-password.html', 'formkurva.css', 'chrome.js', 'sw.js', 'manifest.webmanifest']);
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'MyHome.html')));
+app.get('/:file', (req, res, next) => {
+  if (!publicFiles.has(req.params.file)) return next();
+  res.sendFile(path.join(__dirname, req.params.file));
+});
+// Installationskontot får bara skapa en riktig administratör tills det är borttaget
+app.use('/api', async (req, res, next) => {
+  try {
+    if (!sessionToken(req)) return next();
+    const user = await sessionUser(req);
+    if (!user || !user.setup_account) return next();
+    const allowed = (req.method === 'GET' && (req.path === '/me' || req.path === '/health')) || (req.method === 'POST' && (req.path === '/auth/logout' || req.path === '/admin/users'));
+    if (allowed) return next();
+    res.status(403).json({ error: 'Skapa en ny administratör först.', setupRequired: true });
+  } catch (error) { next(error); }
+});
 setInterval(() => pool.query('DELETE FROM sessions WHERE expires_at <= $1', [Date.now()]).catch(console.error), 60 * 60 * 1000).unref();
 
 app.get('/api/health', async (req, res, next) => {
@@ -290,11 +324,22 @@ app.get('/api/health', async (req, res, next) => {
 app.get('/api/me', async (req, res, next) => {
   try {
     const user = await sessionUser(req);
-    res.json({ user: user ? publicUser(user) : null });
+    const body = { user: user ? publicUser(user) : null };
+    if (user && user.role === 'admin') {
+      const { rows: [setup] } = await pool.query('SELECT id, email FROM users WHERE setup_account = true LIMIT 1');
+      if (setup) body.setupAccount = { id: setup.id, email: setup.email };
+    }
+    res.json(body);
   } catch (error) { next(error); }
 });
 app.post('/api/auth/register', async (req, res, next) => {
   try {
+    const regKey = req.ip || 'unknown';
+    const reg = registerAttempts.get(regKey) || { count: 0, started: Date.now() };
+    if (Date.now() - reg.started > 3600000) { reg.count = 0; reg.started = Date.now(); }
+    if (reg.count >= 10) return res.status(429).json({ error: 'För många nya konton från samma adress. Försök igen senare.' });
+    reg.count += 1;
+    registerAttempts.set(regKey, reg);
     const email = String(req.body.email || '').trim().toLowerCase();
     const password = String(req.body.password || '');
     if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 8) return res.status(400).json({ error: 'Ange en giltig e-post och ett lösenord på minst 8 tecken.' });
@@ -1177,8 +1222,9 @@ app.post('/api/admin/users', requireUser, requireAdmin, async (req, res, next) =
   try {
     const email = String(req.body.email || '').trim().toLowerCase();
     const password = String(req.body.password || '');
-    const role = req.body.role === 'admin' ? 'admin' : 'user';
-    if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 8) return res.status(400).json({ error: 'Ange en giltig e-post och ett lösenord med minst 8 tecken.' });
+    const role = req.user.setup_account || req.body.role === 'admin' ? 'admin' : 'user';
+    const minLength = role === 'admin' ? 12 : 8;
+    if (!/^\S+@\S+\.\S+$/.test(email) || password.length < minLength) return res.status(400).json({ error: `Ange en giltig e-post och ett lösenord med minst ${minLength} tecken.` });
     const { rows: existing } = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
     if (existing.length) return res.status(409).json({ error: 'Det finns redan ett konto med den e-posten.' });
     const { salt, hash } = hashPassword(password);

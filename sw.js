@@ -1,4 +1,4 @@
-const cacheName = 'formkurva-v16';
+const cacheName = 'formkurva-v17';
 const appShell = ['/', '/MyHome.html', '/formkurva.css?v=2', '/chrome.js', '/admin.html', '/reset-password.html', '/manifest.webmanifest'];
 self.addEventListener('install', event => { event.waitUntil(caches.open(cacheName).then(cache => cache.addAll(appShell))); self.skipWaiting(); });
 self.addEventListener('activate', event => { event.waitUntil(self.clients.claim()); });
