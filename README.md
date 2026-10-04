@@ -35,88 +35,44 @@ När det är klart visas adressen och en engångsinloggning (installationskonto)
 
 ## Vad sidan gör
 
-### Logga träning och kropp
-- **Kroppsmått:** vikt, midja, bröst, överarm, lår och höft med datum. Mätningar kan ändras och exporteras som JSON eller CSV.
-- **Styrketräning:** övning, muskelgrupp, flera set med reps och vikt per set, tid och anteckning. Mallar och snabbknapp för att upprepa senaste passet.
-- **Kondition:** promenad, jogging eller löpning, utomhus eller på löpband (med lutning), distans och tid. Hastighet och tempo räknas ut automatiskt.
-- **Timers:** vilotimer med ljud och vibration samt en passklocka.
+| Översikt | Utveckling |
+|---|---|
+| ![Översikt](docs/oversikt.png) | ![Utveckling](docs/utveckling.png) |
+| **Historik** | **Kost** |
+| ![Historik](docs/historik.png) | ![Kost](docs/kost.png) |
 
-### Följa utvecklingen
-- **Översikt:** senaste mått, veckostreak, diagram över träningsdagar och mått.
-- **Personbästa, 1RM och platåer:** beräknad 1RM per övning och varning när utvecklingen står still.
-- **Medaljer och nivåer:** för träningsmängd, aktiva dagar, tid på dygnet, antal pass per övning och kondition.
-- **Utveckling:** dagens och veckans uppdrag med poäng, återhämtning per muskelgrupp, grafer för kroppsmått och 1RM, färdiga träningsprogram (helkropp, över-/underkropp, push/pull/ben) och BMI.
-- **Historik:** bläddra månad för månad eller år för år med sammanfattning, jämförelse mot förra perioden, personbästa, milstolpar, kalender och dag-för-dag-lista. Du kan skapa en delbar bild med ditt träningsår.
-- **Mål och påminnelser:** viktmål med datum, mätpåminnelser och träningspåminnelser (visas medan sidan är öppen).
-
-### Kost och framsteg
-- **Kost:** logga måltider med kalorier, protein, kolhydrater och fett, sätt dagliga mål och se de senaste sju dagarna.
-- **Vatten:** enkel dagslogg med eget mål.
-- **Framstegsbilder:** privata bilder med före/efter-jämförelse. De delas aldrig med någon.
-
-### Community
-- **Vänner:** sök på visningsnamn eller e-post, skicka vänförfrågan och se vännernas personbästa, senaste pass och medaljer.
-- **Peppning:** 💪 👏 🔥 ⚔️ 🏆 👋 med valfritt meddelande, en av varje sort per vän och dag.
-- **Tävling:** topplista per vecka/månad, veckoduell, lagmål med MVP, rekordtavla, utmaningar 1 mot 1 och månadssäsonger med poäng som nollställs (du kan bläddra bakåt).
-- **Grupper:** skapa eller gå med via en 8-teckens kod, med gruppchatt.
-- **Flöden och notiser:** nya personbästa, aktivitet i vänkretsen och notiser i sidan.
-- **Integritet:** du kan välja att inte synas i communityn. Kroppsmått, kost, bilder och e-postadresser delas aldrig.
-
-### Konton och administration
-- Registrering och inloggning med e-post och lösenord (hashade lösenord, sessionscookies), glömt lösenord via e-post.
-- **Admin:** kontostatistik, rollbyte, tvångsutloggning och radering av konton på `/admin.html`. Adminkontot skapas automatiskt från `.env`.
-- **Säkerhetskopia:** varje användare kan ladda ner och läsa in sin egen data som en JSON-fil under Profil. Servern tar dessutom en automatisk databasdump varje dygn.
+- **Logga:** kroppsmått (vikt, midja, bröst, arm, lår, höft), styrketräning med set, reps och vikt, samt kondition (promenad, jogging, löpning). Vilotimer och passklocka ingår.
+- **Följa utvecklingen:** personbästa, beräknad 1RM, platåvarning, medaljer, dagliga och veckovisa uppdrag, återhämtning, grafer, träningsprogram och BMI.
+- **Historik:** bläddra månad för månad eller år för år med sammanfattning, milstolpar och kalender, och skapa en delbar årsbild.
+- **Kost och framsteg:** måltider med kalorier och makron, vattenlogg, kalori- och proteinmål och privata framstegsbilder med före/efter.
+- **Community:** vänner, peppning, topplistor, utmaningar, månadssäsonger, grupper med chatt och notiser. Kroppsmått, kost, bilder och e-post delas aldrig, och du kan dölja dig helt.
+- **Konton:** inloggning med e-post, glömt lösenord, egen JSON-backup (Profil) och en adminsida (`/admin.html`) för konton och roller.
 
 ## Systemkrav
 
-| Vad | Krav |
-|---|---|
-| Operativsystem | En Linux-server, t.ex. Debian 12 eller Ubuntu 22.04/24.04 (VM, LXC eller fysisk dator). Windows/macOS fungerar med Docker Desktop för test. |
-| Processor | x86-64 eller ARM64 (Raspberry Pi 4/5 fungerar) |
-| Minne | Minst 1 GB RAM, 2 GB rekommenderas |
-| Disk | Minst 5 GB ledigt (Docker-avbilder, databas och backuper) |
-| Programvara | Docker Engine med Docker Compose v2, samt Git |
-| Nätverk | Port 3000 (webbsidan) och 8081 (Adminer, valfri) tillgängliga i ditt nätverk. Internetåtkomst vid installation. |
-| Webbläsare | En modern webbläsare (Chrome, Edge, Firefox, Safari) |
-
-Du behöver ingen egen domän för hemmabruk. För åtkomst utifrån, se [Publicera på internet](#publicera-på-internet).
+- **Server:** Linux (Debian 12 eller Ubuntu 22.04/24.04, i VM, LXC eller Raspberry Pi 4/5), x86-64 eller ARM64.
+- **Resurser:** minst 1 GB RAM (2 GB rekommenderas) och 5 GB disk.
+- **Programvara:** Docker med Compose v2 och Git (installeras automatiskt av snabbinstallationen).
+- **Nätverk:** port 3000 för sidan och valfritt 8081 för Adminer. Internet krävs vid installation. Ingen domän behövs i hemmanätverket, se [Publicera på internet](#publicera-på-internet) för åtkomst utifrån.
 
 ## Installation steg för steg
 
 Alla kommandon körs på servern, via SSH eller konsolen. Exemplen utgår från Debian/Ubuntu.
 
-### Steg 1: Uppdatera systemet och installera Git
+<details>
+<summary>Installera Git och Docker för hand (behövs inte med snabbinstallationen)</summary>
 
 ```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y git curl ca-certificates
-```
-
-### Steg 2: Installera Docker
-
-Det enklaste är Dockers officiella installationsskript:
-
-```bash
+sudo apt update && sudo apt install -y git curl ca-certificates
 curl -fsSL https://get.docker.com | sudo sh
-```
-
-Låt din användare köra Docker utan `sudo` (logga ut och in igen efteråt):
-
-```bash
-sudo usermod -aG docker $USER
-```
-
-Kontrollera att allt fungerar:
-
-```bash
-docker --version
+sudo usermod -aG docker $USER   # logga ut och in efteråt
 docker compose version
-docker run --rm hello-world
 ```
 
-Om du kör i en Proxmox-LXC måste containern ha funktionerna `nesting` och `keyctl` aktiverade (Options > Features), annars startar inte Docker. En vanlig VM kräver inga extra inställningar.
+I en Proxmox-LXC måste `nesting` och `keyctl` vara aktiverade (Options > Features).
+</details>
 
-### Steg 3a: Snabbinstallation med skript (rekommenderas)
+### Snabbinstallation med skript (rekommenderas)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/richardstenlund/formkurva/main/install.sh | sudo bash
@@ -131,7 +87,7 @@ Skriptet kräver ingen inmatning och:
 
 Vill du styra något sätter du det före kommandot, t.ex. `APP_URL=https://formkurva.example.se curl ... | sudo -E bash`. Stöds: `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `APP_URL`, `FORMKURVA_DIR`. En befintlig `.env` lämnas alltid orörd.
 
-### Steg 3b: Manuell installation
+### Manuell installation
 
 ```bash
 git clone https://github.com/richardstenlund/formkurva.git
@@ -143,7 +99,7 @@ docker compose up -d --build
 
 Spara i nano med `Ctrl+O`, `Enter`, avsluta med `Ctrl+X`. Första bygget tar någon minut.
 
-### Steg 4: Kontrollera att det körs
+### Kontrollera att det körs
 
 ```bash
 docker compose ps
