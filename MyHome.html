@@ -57,6 +57,16 @@
 		.set-entry label { gap: 4px; }
 		.set-entry input { padding: 8px; }
 		.set-remove { width: 32px; height: 34px; border: 1px solid var(--line); border-radius: 7px; background: white; color: var(--muted); cursor: pointer; }
+		.friend-form { display: flex; gap: 10px; margin-bottom: 14px; }
+		.friend-form input { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); }
+		.friend-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+		.friend-row small { display: block; color: var(--muted); }
+		.friend-row-actions { display: flex; gap: 6px; }
+		.friend-summary { margin-top: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; }
+		.friend-summary[hidden] { display: none; }
+		.friend-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin: 10px 0; }
+		.friend-stats div { padding: 10px; border-radius: 8px; background: var(--paper); font-size: 11px; color: var(--muted); }
+		.friend-stats strong { display: block; font-size: 18px; color: var(--ink); }
 		.cardio-fields { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--white); }
 		.cardio-fields[hidden] { display: none; }
 		.cardio-fields .field-grid { align-items: end; }
@@ -352,6 +362,8 @@
 					<section class="panel feature-panel"><div class="panel-heading"><div><h2>Anteckning & progressbild</h2><p class="panel-subtitle">Spara dagens känsla tillsammans med mätningen.</p></div></div><form class="note-form" id="note-form"><label>Dagens anteckning<textarea name="note" id="daily-note" placeholder="Träning, energi, sömn eller annat..."></textarea></label><label class="photo-drop">Lägg till progressbild<input type="file" id="progress-photo" accept="image/*"><span>Välj en bild från enheten</span></label><img class="photo-preview" id="photo-preview" alt="Förhandsvisning av progressbild"><button class="save-button" type="submit">Spara anteckning <span>→</span></button></form></section>
 				</div>
 
+				<section class="panel profile-panel" id="friends-section" data-view="profil"><div class="panel-heading"><div><h2>Vänner</h2><p class="panel-subtitle">Bjud in andra Formkurva-användare och följ varandras träning, rekord och konditionsdistans. Kroppsmått och e-post delas aldrig.</p></div></div><form class="friend-form" id="friend-form"><input type="email" id="friend-email" maxlength="254" placeholder="Vännens e-postadress" required><button class="account-button primary" type="submit">Skicka förfrågan</button></form><div id="friend-requests"></div><div id="friend-list"><div class="empty-state">Logga in för att lägga till vänner.</div></div><div class="friend-summary" id="friend-summary" hidden></div></section>
+
 				<section class="panel profile-panel" id="privacy-section" data-view="profil"><div class="panel-heading"><div><h2>Integritet & data</h2><p class="panel-subtitle">Du bestämmer över din information.</p></div></div><ul class="privacy-list"><li><span>Inloggade ändringar sparas säkert på servern.</span><button class="export-button" id="export-all">Exportera allt</button></li><li><span>Vill du börja om från början?</span><button class="danger-button" id="delete-data">Radera mina data</button></li></ul></section>
 
 				<section class="panel profile-panel admin-only" id="admin" data-view="profil"><div class="panel-heading"><div><h2>Adminpanel</h2><p class="panel-subtitle">Ändra vilka konton som är administratörer.</p></div></div><div id="admin-users"><div class="empty-state">Laddar konton...</div></div><p class="admin-message">Ändringar börjar gälla direkt. Behåll minst ett admin-konto.</p></section>
@@ -462,9 +474,109 @@
 			renderFocusPicker();
 		}
 		function getProfile() { return serverMode ? currentProfile : JSON.parse(localStorage.getItem(profileKey()) || '{}'); }
-		async function loadServerState() { if (!serverMode) return; try { const session = await api('/me'); currentUser = session.user?.email || ''; sessionUserId = session.user?.id || ''; currentRole = session.user?.role || ''; currentProfile = session.user?.profile || {}; if (session.user) { const [measurementResult, workoutResult] = await Promise.all([api('/measurements'), api('/workouts')]); measurements = measurementResult.measurements; workouts = workoutResult.workouts; } else { measurements = []; workouts = []; } updateAccountUi(); applyTheme(); renderProfile(); render(); if (currentRole === 'admin') loadAdminUsers(); } catch (error) { handleApiError(error); } }
+		async function loadServerState() { if (!serverMode) return; try { const session = await api('/me'); currentUser = session.user?.email || ''; sessionUserId = session.user?.id || ''; currentRole = session.user?.role || ''; currentProfile = session.user?.profile || {}; if (session.user) { const [measurementResult, workoutResult] = await Promise.all([api('/measurements'), api('/workouts')]); measurements = measurementResult.measurements; workouts = workoutResult.workouts; } else { measurements = []; workouts = []; } updateAccountUi(); applyTheme(); renderProfile(); render(); if (currentRole === 'admin') loadAdminUsers(); loadFriends(); } catch (error) { handleApiError(error); } }
 		async function loadAdminUsers() { if (!serverMode || currentRole !== 'admin') return; try { const result = await api('/admin/users'); document.getElementById('admin-users').innerHTML = '<table class="admin-table"><thead><tr><th>E-post</th><th>Skapad</th><th>Roll</th></tr></thead><tbody>' + result.users.map(user => '<tr><td>' + user.email + (user.id === Number(sessionUserId) ? ' (du)' : '') + '</td><td>' + new Date(user.created_at).toLocaleDateString('sv-SE') + '</td><td><select class="role-select" data-user-id="' + user.id + '" data-original-role="' + user.role + '"' + (user.id === Number(sessionUserId) ? ' disabled' : '') + '><option value="user"' + (user.role === 'user' ? ' selected' : '') + '>Vanlig användare</option><option value="admin"' + (user.role === 'admin' ? ' selected' : '') + '>Administratör</option></select></td></tr>').join('') + '</tbody></table>'; document.querySelectorAll('.role-select').forEach(select => select.addEventListener('change', changeUserRole)); } catch (error) { document.getElementById('admin-users').innerHTML = '<div class="empty-state">' + error.message + '</div>'; } }
 		let sessionUserId = '';
+		function friendRow(name, subtitle, actions) {
+			const row = document.createElement('div');
+			row.className = 'friend-row';
+			const label = document.createElement('span');
+			const title = document.createElement('strong');
+			title.textContent = name;
+			label.append(title);
+			if (subtitle) { const small = document.createElement('small'); small.textContent = subtitle; label.append(small); }
+			const buttons = document.createElement('div');
+			buttons.className = 'friend-row-actions';
+			actions.forEach(([text, handler]) => {
+				const button = document.createElement('button');
+				button.type = 'button'; button.className = 'export-button'; button.textContent = text;
+				button.addEventListener('click', handler);
+				buttons.append(button);
+			});
+			row.append(label, buttons);
+			return row;
+		}
+		async function friendAction(request, message) {
+			try { await request(); if (message) showToast(message); await loadFriends(); } catch (error) { handleApiError(error); }
+		}
+		async function loadFriends() {
+			const requests = document.getElementById('friend-requests');
+			const list = document.getElementById('friend-list');
+			const summary = document.getElementById('friend-summary');
+			if (!serverMode || !currentUser) return;
+			try {
+				const data = await api('/friends');
+				requests.replaceChildren(...data.incoming.map(item => friendRow(`${item.name} vill bli vän`, item.email, [
+					['Acceptera', () => friendAction(() => api(`/friends/${item.id}/accept`, { method: 'POST' }), 'Ni är nu vänner.')],
+					['Avböj', () => friendAction(() => api(`/friends/${item.id}`, { method: 'DELETE' }))]
+				])), ...data.outgoing.map(item => friendRow(item.name, 'Väntar på svar', [
+					['Avbryt', () => friendAction(() => api(`/friends/${item.id}`, { method: 'DELETE' }))]
+				])));
+				list.replaceChildren(...(data.friends.length ? data.friends.map(item => friendRow(item.name, '', [
+					['Visa träning', () => showFriendSummary(item.userId)],
+					['Ta bort', () => { if (confirm(`Ta bort ${item.name} som vän?`)) { summary.hidden = true; friendAction(() => api(`/friends/${item.id}`, { method: 'DELETE' })); } }]
+				])) : (() => { const empty = document.createElement('div'); empty.className = 'empty-state'; empty.textContent = 'Inga vänner ännu. Skicka en förfrågan med din väns e-postadress.'; return [empty]; })()));
+			} catch (error) { handleApiError(error); }
+		}
+		async function showFriendSummary(userId) {
+			const box = document.getElementById('friend-summary');
+			try {
+				const data = await api(`/friends/${userId}/summary`);
+				box.replaceChildren();
+				const heading = document.createElement('h3');
+				heading.textContent = data.name;
+				const stats = document.createElement('div');
+				stats.className = 'friend-stats';
+				[['Pass totalt', data.totalWorkouts], ['Aktiva dagar', data.activeDays], ['Senaste 30 dagarna', data.last30Days], ['Konditionsdistans', `${data.cardioKm} km`]].forEach(([label, value]) => {
+					const cell = document.createElement('div');
+					const strong = document.createElement('strong');
+					strong.textContent = String(value);
+					cell.append(strong, label);
+					stats.append(cell);
+				});
+				const prTitle = document.createElement('h4');
+				prTitle.textContent = 'Personbästa';
+				const prList = document.createElement('ul');
+				prList.className = 'pr-list';
+				(data.records.length ? data.records : [{ exercise: 'Inga styrkepass ännu', weight: null }]).forEach(record => {
+					const li = document.createElement('li');
+					const name = document.createElement('span');
+					name.textContent = record.exercise;
+					const value = document.createElement('span');
+					value.className = 'pr-value';
+					value.textContent = record.weight === null ? '' : `${record.weight} kg × ${record.reps}`;
+					li.append(name, value);
+					prList.append(li);
+				});
+				const recentTitle = document.createElement('h4');
+				recentTitle.textContent = 'Senaste passen';
+				const recentList = document.createElement('ul');
+				recentList.className = 'pr-list';
+				data.recent.forEach(item => {
+					const li = document.createElement('li');
+					const name = document.createElement('span');
+					name.textContent = `${item.date} · ${item.exercise}`;
+					const value = document.createElement('span');
+					value.className = 'pr-value';
+					value.textContent = item.detail;
+					li.append(name, value);
+					recentList.append(li);
+				});
+				box.append(heading, stats, prTitle, prList, recentTitle, recentList);
+				box.hidden = false;
+			} catch (error) { handleApiError(error); }
+		}
+		document.getElementById('friend-form').addEventListener('submit', async event => {
+			event.preventDefault();
+			if (!currentUser) { openAuth(true); return; }
+			const input = document.getElementById('friend-email');
+			try {
+				const result = await api('/friends', { method: 'POST', body: JSON.stringify({ email: input.value }) });
+				input.value = '';
+				showToast(result.message);
+				await loadFriends();
+			} catch (error) { handleApiError(error); }
+		});
 		async function changeUserRole(event) { const select = event.target; try { await api('/admin/users/' + select.dataset.userId + '/role', { method: 'PATCH', body: JSON.stringify({ role: select.value }) }); showToast('Användarrollen är uppdaterad.'); } catch (error) { select.value = select.dataset.originalRole; handleApiError(error); } }
 		function calculateStreak() {
 			const uniqueDates = new Set((measurements || []).map(item => item.date).filter(Boolean));

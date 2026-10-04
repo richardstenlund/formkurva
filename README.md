@@ -44,6 +44,8 @@ Glömt lösenord finns på inloggningen. Fyll i `SMTP_*` och `APP_URL` i `.env` 
 
 Den samlade översiktssidan (`/`) samlar kroppsmått och träningspass på ett ställe. Där kan användare logga kroppsvikt, midja, bröst, överarm, lår och höft, spara längd i sin profil och registrera träningspass med övning, muskelgrupp, set, reps, vikt och tid. Uppgifterna sparas per konto i PostgreSQL. På översiktssidan finns medaljer för träningsmängd, aktiva dagar, morgon/dag/kvällsträning och antal pass per övning. Diagram visar träningsdagar per vecka och valda kroppsmåtts förändring. Träningspåminnelser kan ställas in per tid och vardags-/helgfrekvens; de visas medan Formkurva är öppet. Webbläsaraviseringar är valfria och kräver tillåtelse samt HTTPS eller localhost.
 
+Under **Vänner** på profilsidan kan användare skicka vänförfrågningar med varandras e-postadress. När förfrågan accepterats kan vännerna se varandras antal pass, aktiva dagar, personbästa, konditionsdistans och senaste pass. Kroppsmått och e-postadresser delas aldrig, och båda parter kan när som helst ta bort vänskapen.
+
 Vid vanlig HTTP i hemnätet ska `SECURE_COOKIES` vara `false`. När du lägger sidan bakom HTTPS ändrar du den till `true` och kör om containern.
 
 Adminpanelen (`/admin.html`) har en länk **Öppna databasen** till Adminer på port `8081`. Adminer administrerar PostgreSQL via webbläsaren. Logga in med server `db`, driver `PostgreSQL`, användare `formkurva`, databas `formkurva` och lösenordet från `DB_PASSWORD` i `.env`. Exponera inte Adminer mot internet utan HTTPS och extra åtkomstskydd.

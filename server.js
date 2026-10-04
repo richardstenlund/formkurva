@@ -74,6 +74,18 @@ async function initDatabase() {
   await pool.query('ALTER TABLE workouts ADD COLUMN IF NOT EXISTS duration_minutes DECIMAL(8,2)');
   await pool.query('ALTER TABLE workouts ADD COLUMN IF NOT EXISTS incline_percent DECIMAL(5,2)');
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_workouts_user_date ON workouts (user_id, date)`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS friendships (
+    id SERIAL PRIMARY KEY,
+    requester_id INTEGER NOT NULL,
+    addressee_id INTEGER NOT NULL,
+    status VARCHAR(10) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (requester_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (addressee_id) REFERENCES users(id) ON DELETE CASCADE,
+    CHECK (requester_id <> addressee_id)
+  )`);
+  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_friendships_pair ON friendships (LEAST(requester_id, addressee_id), GREATEST(requester_id, addressee_id))');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_friendships_addressee ON friendships (addressee_id)');
   await pool.query(`CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
@@ -394,6 +406,87 @@ app.put('/api/profile', requireUser, async (req, res, next) => {
     if (profile.height !== undefined && profile.height !== '') profile.height = Number(profile.height);
     await pool.query('UPDATE users SET profile_json = $1 WHERE id = $2', [JSON.stringify(profile), req.user.id]);
     res.json({ profile });
+  } catch (error) { next(error); }
+});
+function displayNameFor(row) {
+  const name = String(parseProfile(row.profile_json).name || '').trim();
+  return name || String(row.email).split('@')[0];
+}
+app.get('/api/friends', requireUser, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT f.id, f.status, f.requester_id, u.id AS other_id, u.email, u.profile_json
+       FROM friendships f JOIN users u ON u.id = CASE WHEN f.requester_id = $1 THEN f.addressee_id ELSE f.requester_id END
+       WHERE f.requester_id = $1 OR f.addressee_id = $1 ORDER BY f.created_at DESC`, [req.user.id]);
+    const result = { friends: [], incoming: [], outgoing: [] };
+    rows.forEach(row => {
+      const item = { id: row.id, userId: row.other_id, name: displayNameFor(row) };
+      if (row.status === 'accepted') result.friends.push(item);
+      else if (row.requester_id === req.user.id) result.outgoing.push(item);
+      else result.incoming.push({ ...item, email: row.email });
+    });
+    res.json(result);
+  } catch (error) { next(error); }
+});
+app.post('/api/friends', requireUser, async (req, res, next) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!email || email.length > 254) return res.status(400).json({ error: 'Ange en e-postadress.' });
+    const message = 'Om e-postadressen tillhör ett konto har en vänförfrågan skickats.';
+    const { rows: [target] } = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (!target || target.id === req.user.id) return res.status(202).json({ message });
+    const { rows: [existing] } = await pool.query(
+      'SELECT id, status, requester_id FROM friendships WHERE LEAST(requester_id, addressee_id) = LEAST($1::int, $2::int) AND GREATEST(requester_id, addressee_id) = GREATEST($1::int, $2::int)', [req.user.id, target.id]);
+    if (existing && existing.status === 'pending' && existing.requester_id === target.id) {
+      await pool.query("UPDATE friendships SET status = 'accepted' WHERE id = $1", [existing.id]);
+      return res.status(202).json({ message: 'Ni är nu vänner.' });
+    }
+    if (!existing) await pool.query('INSERT INTO friendships (requester_id, addressee_id) VALUES ($1, $2)', [req.user.id, target.id]);
+    res.status(202).json({ message });
+  } catch (error) { next(error); }
+});
+app.post('/api/friends/:id/accept', requireUser, async (req, res, next) => {
+  try {
+    const result = await pool.query("UPDATE friendships SET status = 'accepted' WHERE id = $1 AND addressee_id = $2 AND status = 'pending'", [Number(req.params.id) || 0, req.user.id]);
+    if (!result.rowCount) return res.status(404).json({ error: 'Vänförfrågan hittades inte.' });
+    res.status(204).end();
+  } catch (error) { next(error); }
+});
+app.delete('/api/friends/:id', requireUser, async (req, res, next) => {
+  try {
+    await pool.query('DELETE FROM friendships WHERE id = $1 AND (requester_id = $2 OR addressee_id = $2)', [Number(req.params.id) || 0, req.user.id]);
+    res.status(204).end();
+  } catch (error) { next(error); }
+});
+app.get('/api/friends/:userId/summary', requireUser, async (req, res, next) => {
+  try {
+    const friendId = Number(req.params.userId) || 0;
+    const { rows: [friendship] } = await pool.query(
+      "SELECT 1 FROM friendships WHERE status = 'accepted' AND ((requester_id = $1 AND addressee_id = $2) OR (requester_id = $2 AND addressee_id = $1))", [req.user.id, friendId]);
+    if (!friendship) return res.status(403).json({ error: 'Ni är inte vänner.' });
+    const { rows: [friend] } = await pool.query('SELECT email, profile_json FROM users WHERE id = $1', [friendId]);
+    const { rows } = await pool.query('SELECT date, exercise, sets, reps, weight, workout_type, cardio_activity, cardio_location, distance_km, duration_minutes FROM workouts WHERE user_id = $1 ORDER BY date DESC, workout_time DESC NULLS LAST', [friendId]);
+    const dateOf = row => row.date.toISOString ? row.date.toISOString().slice(0, 10) : String(row.date);
+    const since = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+    const records = new Map();
+    let cardioKm = 0;
+    rows.forEach(row => {
+      if (row.workout_type === 'cardio') { cardioKm += Number(row.distance_km) || 0; return; }
+      const key = row.exercise.toLowerCase();
+      const weight = Number(row.weight);
+      if (!records.has(key) || weight > records.get(key).weight) records.set(key, { exercise: row.exercise, weight, reps: row.reps });
+    });
+    res.json({
+      name: displayNameFor(friend),
+      totalWorkouts: rows.length,
+      activeDays: new Set(rows.map(dateOf)).size,
+      last30Days: rows.filter(row => dateOf(row) >= since).length,
+      cardioKm: Math.round(cardioKm * 10) / 10,
+      records: [...records.values()].sort((a, b) => b.weight - a.weight).slice(0, 8),
+      recent: rows.slice(0, 5).map(row => row.workout_type === 'cardio'
+        ? { date: dateOf(row), exercise: row.exercise, detail: `${Number(row.distance_km)} km på ${Number(row.duration_minutes)} min` }
+        : { date: dateOf(row), exercise: row.exercise, detail: `${row.sets} × ${row.reps} @ ${Number(row.weight)} kg` })
+    });
   } catch (error) { next(error); }
 });
 app.delete('/api/account', requireUser, async (req, res, next) => {
