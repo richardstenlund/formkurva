@@ -1084,6 +1084,74 @@ app.delete('/api/photos/:id', requireUser, async (req, res, next) => {
     await pool.query('DELETE FROM progress_photos WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
     res.status(204).end();
   } catch (error) { next(error); }
+});app.get('/api/backup', requireUser, async (req, res, next) => {
+  try {
+    const [workouts, measurements, meals, profile] = await Promise.all([
+      pool.query('SELECT date, workout_time, exercise, muscle_group, sets, reps, weight, set_details_json, workout_type, cardio_activity, cardio_location, distance_km, duration_minutes, incline_percent, notes FROM workouts WHERE user_id = $1 ORDER BY date', [req.user.id]),
+      pool.query('SELECT date, data_json FROM measurements WHERE user_id = $1 ORDER BY date', [req.user.id]),
+      pool.query('SELECT date, name, kcal, protein, carbs, fat FROM meals WHERE user_id = $1 ORDER BY date', [req.user.id]),
+      pool.query('SELECT profile_json FROM users WHERE id = $1', [req.user.id])
+    ]);
+    const clean = profile.rows[0] ? parseProfile(profile.rows[0].profile_json) : {};
+    delete clean.photo;
+    res.setHeader('Content-Disposition', 'attachment; filename="formkurva-backup.json"');
+    res.json({
+      app: 'formkurva', version: 1, exportedAt: new Date().toISOString(), profile: clean,
+      workouts: workouts.rows.map(row => ({ ...row, date: dateOf(row), weight: Number(row.weight), set_details: (() => { try { return JSON.parse(row.set_details_json || '[]'); } catch (error) { return []; } })(), set_details_json: undefined })),
+      measurements: measurements.rows.map(row => ({ ...parseProfile(row.data_json), date: dateOf(row) })),
+      meals: meals.rows.map(row => ({ ...row, date: dateOf(row), protein: Number(row.protein), carbs: Number(row.carbs), fat: Number(row.fat) }))
+    });
+  } catch (error) { next(error); }
+});
+app.post('/api/restore', requireUser, async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    const body = req.body || {};
+    if (body.app !== 'formkurva') return res.status(400).json({ error: 'Filen är inte en Formkurva-säkerhetskopia.' });
+    const workouts = Array.isArray(body.workouts) ? body.workouts : [];
+    const measurements = Array.isArray(body.measurements) ? body.measurements : [];
+    const meals = Array.isArray(body.meals) ? body.meals : [];
+    if (workouts.length > 20000 || measurements.length > 20000 || meals.length > 20000) return res.status(400).json({ error: 'Filen innehåller för många poster.' });
+    await client.query('BEGIN');
+    const existing = new Set((await client.query('SELECT date, exercise, set_details_json, distance_km, workout_time FROM workouts WHERE user_id = $1', [req.user.id])).rows.map(row => [dateOf(row), row.exercise, row.set_details_json, Number(row.distance_km || 0), row.workout_time || ''].join('|')));
+    const existingM = new Set((await client.query('SELECT date, data_json FROM measurements WHERE user_id = $1', [req.user.id])).rows.map(row => dateOf(row) + '|' + row.data_json));
+    const existingMeals = new Set((await client.query('SELECT date, name, kcal FROM meals WHERE user_id = $1', [req.user.id])).rows.map(row => [dateOf(row), row.name, row.kcal].join('|')));
+    const added = { workouts: 0, measurements: 0, meals: 0, skipped: 0 };
+    for (const item of workouts) {
+      const isCardio = item?.workout_type === 'cardio';
+      const sets = Array.isArray(item?.set_details) ? item.set_details.filter(set => set && Number(set.reps) >= 1 && Number(set.reps) <= 1000 && Number(set.weight) >= 0 && Number(set.weight) <= 10000).map(set => ({ reps: Number(set.reps), weight: Number(set.weight) })).slice(0, 100) : [];
+      if (!item || !validDay(item.date) || typeof item.exercise !== 'string' || !item.exercise.trim() || (!isCardio && !sets.length) || (isCardio && !(Number(item.distance_km) > 0 && Number(item.duration_minutes) > 0))) { added.skipped += 1; continue; }
+      const time = /^([01]\d|2[0-3]):[0-5]\d(:\d\d)?$/.test(item.workout_time || '') ? item.workout_time.slice(0, 5) + ':00' : null;
+      const json = JSON.stringify(isCardio ? [] : sets);
+      const key = [item.date, item.exercise.trim().slice(0, 100), json, isCardio ? Number(item.distance_km) : 0, time || ''].join('|');
+      if (existing.has(key)) { added.skipped += 1; continue; }
+      existing.add(key);
+      await client.query('INSERT INTO workouts (id, user_id, date, workout_time, exercise, muscle_group, sets, reps, weight, set_details_json, workout_type, cardio_activity, cardio_location, distance_km, duration_minutes, incline_percent, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)', [crypto.randomUUID(), req.user.id, item.date, time, item.exercise.trim().slice(0, 100), String(item.muscle_group || 'Annat').slice(0, 50), isCardio ? 0 : sets.length, isCardio ? 0 : Math.max(...sets.map(set => set.reps)), isCardio ? 0 : Math.max(...sets.map(set => set.weight)), json, isCardio ? 'cardio' : 'strength', isCardio ? item.cardio_activity : null, isCardio ? item.cardio_location : null, isCardio ? Number(item.distance_km) : null, isCardio ? Number(item.duration_minutes) : null, isCardio && item.incline_percent !== null && item.incline_percent !== undefined ? Number(item.incline_percent) : null, String(item.notes || '').slice(0, 500)]);
+      added.workouts += 1;
+    }
+    for (const item of measurements) {
+      if (!validMeasurement(item)) { added.skipped += 1; continue; }
+      const { date, ...data } = item;
+      const clean = {};
+      ['weight', 'waist', 'chest', 'arm', 'thigh', 'hip'].forEach(key => { if (data[key] !== '' && data[key] !== undefined && Number(data[key]) >= 0) clean[key] = Number(data[key]); });
+      const json = JSON.stringify(clean);
+      if (existingM.has(date + '|' + json)) { added.skipped += 1; continue; }
+      existingM.add(date + '|' + json);
+      await client.query('INSERT INTO measurements (id, user_id, date, data_json) VALUES ($1, $2, $3, $4)', [crypto.randomUUID(), req.user.id, date, json]);
+      added.measurements += 1;
+    }
+    for (const item of meals) {
+      const kcal = macro(item?.kcal, 10000), protein = macro(item?.protein, 1000), carbs = macro(item?.carbs, 2000), fat = macro(item?.fat, 1000);
+      if (!item || !validDay(item.date) || typeof item.name !== 'string' || !item.name.trim() || item.name.length > 100 || [kcal, protein, carbs, fat].includes(null)) { added.skipped += 1; continue; }
+      const key = [item.date, item.name.trim(), Math.round(kcal)].join('|');
+      if (existingMeals.has(key)) { added.skipped += 1; continue; }
+      existingMeals.add(key);
+      await client.query('INSERT INTO meals (id, user_id, date, name, kcal, protein, carbs, fat) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [crypto.randomUUID(), req.user.id, item.date, item.name.trim(), Math.round(kcal), protein, carbs, fat]);
+      added.meals += 1;
+    }
+    await client.query('COMMIT');
+    res.json({ ok: true, added });
+  } catch (error) { await client.query('ROLLBACK').catch(() => {}); next(error); } finally { client.release(); }
 });app.delete('/api/account', requireUser, async (req, res, next) => {
   try {
     await pool.query('DELETE FROM users WHERE id = $1', [req.user.id]);

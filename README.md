@@ -79,3 +79,5 @@ docker compose exec db pg_dump -U formkurva -d formkurva > formkurva.sql
 Fliken **Historik** låter dig bläddra bakåt månad för månad eller år för år: sammanfattning med jämförelse mot föregående period, personbästa, milstolpar, kroppsmåttsförändring, kalender och dag-för-dag-lista.
 
 Flikarna **Utveckling** (dagens/veckans uppdrag, återhämtning per muskelgrupp, grafer för kroppsmått och 1RM), **Kost** (måltider, kalori- och proteinmål) och **Framsteg** (privata framstegsbilder med före/efter-jämförelse) är nya. Under Historik > År kan du skapa en delbar bild med ditt träningsår.
+
+Även nytt: vilotimer och passklocka (Logga), träningsprogram och kroppsindex (Utveckling), vattenloggning (Kost) samt säkerhetskopia/återställning som JSON-fil (Profil).
