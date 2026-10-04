@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="theme-color" content="#173b32">
+	<title>Hem & vardag | Formkurva</title>
+	<link rel="stylesheet" href="vardag.css">
+	<script src="vardag.js" defer></script>
+</head>
+<body>
+	<div class="layout">
+		<aside class="sidebar">
+			<a class="brand" href="vardag.html"><span class="brand-icon">v.</span><span>vardag<small>ordning på livet</small></span></a>
+			<div class="nav-caption">Ditt utrymme</div>
+			<nav id="main-nav" aria-label="Huvudmeny">
+				<button class="nav-link active" data-view="home"><span>⌂</span> Översikt</button>
+				<button class="nav-link" data-view="notes"><span>✎</span> Anteckningar</button>
+				<button class="nav-link" data-view="recipes"><span>♨</span> Recept</button>
+				<button class="nav-link" data-view="meals"><span>☼</span> Måltidsplan</button>
+				<button class="nav-link" data-view="tasks"><span>✓</span> Att göra</button>
+				<button class="nav-link" data-view="chores"><span>↻</span> Sysslor & rutiner</button>
+				<button class="nav-link" data-view="bills"><span>¤</span> Räkningar & avtal</button>
+				<button class="nav-link" data-view="shopping"><span>🛒</span> Inköpslista</button>
+				<button class="nav-link" data-view="inventory"><span>▤</span> Inventarie</button>
+				<button class="nav-link" data-view="pets"><span>♡</span> Djur & omsorg</button>
+				<button class="nav-link" data-view="maintenance"><span>⌂</span> Hemunderhåll</button>
+				<button class="nav-link" data-view="important"><span>★</span> Viktigt att veta</button>
+				<button class="nav-link" data-view="packing"><span>♧</span> Packlistor</button>
+				<button class="nav-link" data-view="errands"><span>↗</span> Ärenden & ute</button>
+				<button class="nav-link" data-view="calendar"><span>▦</span> Kalender</button>
+				<button class="nav-link" data-view="expenses"><span>kr</span> Budget</button>
+				<button class="nav-link" data-view="documents"><span>↗</span> Dokument</button>
+			</nav>
+			<div class="sidebar-footer">
+				<a href="MyHome.html"><span>←</span> Till Formkurva</a>
+				<p>Små saker på rätt plats gör vardagen lättare.</p>
+			</div>
+		</aside>
+
+		<main class="main">
+			<header class="topbar">
+				<div class="breadcrumb"><span class="status-dot"></span> DITT LUGNA HÖRN AV VARDAGEN</div>
+				<div class="top-actions">
+					<div class="save-status" id="save-status">Sparas på den här enheten</div>
+					<button class="quiet-button" id="theme-toggle" type="button" aria-label="Byt färgtema">◐</button>
+					<button class="account-button" id="export-button" type="button">Backup</button>
+					<button class="account-button" id="import-button" type="button">Återställ</button>
+					<input id="import-file" class="sr-only" type="file" accept=".json,application/json">
+					<button class="account-button" id="share-button" type="button" hidden>Dela hushåll</button>
+					<button class="account-button" id="account-button" type="button">Logga in</button>
+				</div>
+			</header>
+
+			<section class="page-head" id="page-head">
+				<div>
+					<p class="eyebrow" id="page-eyebrow">SÖNDAGSKOLL</p>
+					<h1 id="page-title">Bra att ha hemma</h1>
+					<p class="page-description" id="page-description">Håll koll på vad som finns, vad som behövs och allt som gör hemmet till ditt.</p>
+				</div>
+				<div class="add-control">
+					<button class="primary-button" id="add-button" type="button" aria-expanded="false"><span>＋</span> <span id="add-button-label">Lägg till nytt</span></button>
+					<div class="add-picker" id="add-picker" hidden>
+						<button type="button" data-action="quick-type" data-type="tasks">✓ <span>Uppgift</span></button>
+						<button type="button" data-action="quick-type" data-type="notes">✎ <span>Anteckning</span></button>
+						<button type="button" data-action="quick-type" data-type="meals">☼ <span>Måltid</span></button>
+						<button type="button" data-action="quick-type" data-type="recipes">♨ <span>Recept</span></button>
+						<button type="button" data-action="quick-type" data-type="shopping">🛒 <span>Inköp</span></button>
+						<button type="button" data-action="quick-type" data-type="inventory">▤ <span>Inventarie</span></button>
+						<button type="button" data-action="quick-type" data-type="chores">↻ <span>Syssla</span></button>
+						<button type="button" data-action="quick-type" data-type="bills">¤ <span>Räkning</span></button>
+					</div>
+				</div>
+			</section>
+
+			<section class="dashboard" id="dashboard">
+				<div class="welcome-card">
+					<div class="welcome-copy"><span class="welcome-kicker">EN SAK I TAGET</span><h2>Få koll på<br>allt hemma.</h2><p>Från skafferiet till djurens mat — samla vardagen på ett ställe.</p><button class="light-button" data-goto="inventory" type="button">Se vad du har hemma <span>↗</span></button></div>
+					<div class="sun-art" aria-hidden="true"><div class="sun"></div><span class="art-leaf leaf-one"></span><span class="art-leaf leaf-two"></span><span class="art-leaf leaf-three"></span><span class="art-ground"></span></div>
+					<div class="welcome-note"><span>✦</span> Det behöver inte bli klart på en gång.</div>
+				</div>
+				<div class="stat-grid" id="stat-grid"></div>
+				<div class="dashboard-grid">
+					<section class="section-card agenda-card"><div class="section-heading"><div><p class="eyebrow">HÅLL KOLL</p><h2>På gång</h2></div><button class="text-button" data-goto="tasks" type="button">Visa alla →</button></div><div id="agenda-list"></div></section>
+					<section class="section-card meals-preview-card"><div class="section-heading"><div><p class="eyebrow">MAT UTAN STRESS</p><h2>På veckans meny</h2></div><button class="text-button" data-goto="meals" type="button">Planera →</button></div><div id="meals-preview"></div></section>
+					<section class="section-card chores-preview-card"><div class="section-heading"><div><p class="eyebrow">SMÅ SAKER SOM HJÄLPER</p><h2>Sysslor att ta tag i</h2></div><button class="text-button" data-goto="chores" type="button">Alla sysslor →</button></div><div id="chores-preview"></div></section>
+					<section class="section-card shopping-card"><div class="section-heading"><div><p class="eyebrow">NÄSTA TUR</p><h2>Från inköpslistan</h2></div><button class="text-button" data-goto="shopping" type="button">Hela listan →</button></div><div id="shopping-preview"></div></section>
+					<section class="section-card bills-preview-card"><div class="section-heading"><div><p class="eyebrow">HÅLL KOLL PÅ DATUMEN</p><h2>Räkningar framöver</h2></div><button class="text-button" data-goto="bills" type="button">Alla räkningar →</button></div><div id="bills-preview"></div></section>
+					<section class="section-card inspiration-card"><div class="section-heading"><div><p class="eyebrow">NÅGOT GOTT</p><h2>Recept att spara</h2></div><button class="text-button" data-goto="recipes" type="button">Alla recept →</button></div><div id="recipe-preview"></div></section>
+					<section class="section-card inventory-preview-card"><div class="section-heading"><div><p class="eyebrow">KOLLA LAGRET</p><h2>Behöver fyllas på</h2></div><button class="text-button" data-goto="inventory" type="button">Inventariet →</button></div><div id="inventory-preview"></div></section>
+					<section class="section-card pets-preview-card"><div class="section-heading"><div><p class="eyebrow">FAMILJENS PÄLSKLÄDDA</p><h2>Djur & omsorg</h2></div><button class="text-button" data-goto="pets" type="button">Se djuren →</button></div><div id="pets-preview"></div></section>
+					<section class="section-card maintenance-preview-card"><div class="section-heading"><div><p class="eyebrow">TA HAND OM HEMMET</p><h2>Påminnelser</h2></div><button class="text-button" data-goto="maintenance" type="button">Hemunderhåll →</button></div><div id="maintenance-preview"></div></section>
+					<section class="section-card budget-preview-card"><div class="section-heading"><div><p class="eyebrow">DEN HÄR MÅNADEN</p><h2>Hushållsbudget</h2></div><button class="text-button" data-goto="expenses" type="button">Utgifter →</button></div><div id="budget-preview"></div></section>
+					<section class="section-card calendar-preview-card"><div class="section-heading"><div><p class="eyebrow">DATUM ATT KOMMA IHÅG</p><h2>Kalender</h2></div><button class="text-button" data-goto="calendar" type="button">Öppna →</button></div><div id="calendar-preview"></div></section>
+					<section class="section-card reminders-card"><div class="section-heading"><div><p class="eyebrow">PÅMINNELSER</p><h2>Få en knuff i rätt tid</h2></div><button class="text-button" id="reminders-button" type="button">Aktivera</button></div><p class="preview-empty" id="reminders-status">Aviseringar visas medan Hem & vardag är öppet på den här enheten.</p></section>
+					<section class="section-card templates-card"><div class="section-heading"><div><p class="eyebrow">KOM IGÅNG SNABBT</p><h2>Färdiga checklistor</h2></div></div><div class="template-buttons"><button class="secondary-button" data-action="template" data-template="weekly-clean" type="button">Veckostädning</button><button class="secondary-button" data-action="template" data-template="moving" type="button">Flytt</button><button class="secondary-button" data-action="template" data-template="trip" type="button">Resa</button><button class="secondary-button" data-action="template" data-template="weekly-shop" type="button">Veckohandling</button></div></section>
+					<section class="section-card quick-card"><div class="section-heading"><div><p class="eyebrow">SNABBT OCH ENKELT</p><h2>Vad vill du samla?</h2></div></div><div class="quick-links">
+						<button data-action="quick-add" data-type="inventory" type="button"><span class="quick-icon mint">▤</span><span>Sak hemma<small>Mat, städ, prylar</small></span><b>＋</b></button>
+						<button data-action="quick-add" data-type="pets" type="button"><span class="quick-icon peach">♡</span><span>Djur & omsorg<small>Mat, vård, rutiner</small></span><b>＋</b></button>
+						<button data-action="quick-add" data-type="shopping" type="button"><span class="quick-icon lavender">🛒</span><span>Att handla<small>Inköpslista</small></span><b>＋</b></button>
+					</div></section>
+				</div>
+			</section>
+
+			<section class="list-view" id="list-view" hidden>
+				<div class="list-toolbar">
+					<label class="search-box"><span>⌕</span><input id="search-input" type="search" placeholder="Sök i listan..." autocomplete="off"><kbd>⌘ K</kbd></label>
+					<div class="filter-group" id="filter-group"></div>
+				</div>
+				<div class="item-grid" id="item-grid"></div>
+			</section>
+			<section class="calendar-view" id="calendar-view" hidden>
+				<div class="calendar-heading"><button class="quiet-button" data-action="calendar-prev" type="button" aria-label="Föregående månad">‹</button><h2 id="calendar-month-title"></h2><button class="quiet-button" data-action="calendar-next" type="button" aria-label="Nästa månad">›</button></div>
+				<div class="calendar-grid" id="calendar-grid"></div>
+				<section class="section-card calendar-day-card"><h2 id="calendar-day-title">Välj en dag</h2><div id="calendar-day-items"></div></section>
+			</section>
+
+			<footer class="page-footer"><span>En sak i taget.</span><span id="footer-date"></span></footer>
+		</main>
+	</div>
+
+	<div class="modal-backdrop" id="item-modal" hidden>
+		<section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+			<div class="modal-heading"><div><p class="eyebrow" id="modal-eyebrow">NYTT I DIN VARDAG</p><h2 id="modal-title">Lägg till</h2></div><button class="quiet-button close-button" data-action="close-modal" type="button" aria-label="Stäng">×</button></div>
+			<form id="item-form">
+				<div id="form-fields"></div>
+				<div class="modal-actions"><button class="secondary-button" data-action="close-modal" type="button">Avbryt</button><button class="primary-button" type="submit" id="save-item">Spara</button></div>
+			</form>
+		</section>
+	</div>
+
+	<div class="modal-backdrop" id="auth-modal" hidden>
+		<section class="modal auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+			<div class="modal-heading"><div><p class="eyebrow">SYNKA DINA SAKER</p><h2 id="auth-title">Spara på ditt konto</h2><p class="modal-description">Dina listor följer med mellan enheter.</p></div><button class="quiet-button close-button" data-action="close-auth" type="button" aria-label="Stäng">×</button></div>
+			<form id="auth-form">
+				<label class="form-field">E-post<input type="email" name="email" required autocomplete="email" placeholder="du@exempel.se"></label>
+				<label class="form-field">Lösenord<input type="password" name="password" required minlength="8" autocomplete="current-password" placeholder="Minst 8 tecken"></label>
+				<p class="form-error" id="auth-error" role="alert"></p>
+				<button class="primary-button full-button" type="submit" id="auth-submit">Logga in</button>
+			</form>
+			<p class="auth-switch" id="auth-switch">Nytt konto? <button type="button">Skapa ett här</button></p>
+		</section>
+	</div>
+
+	<div class="modal-backdrop" id="share-modal" hidden>
+		<section class="modal auth-modal" role="dialog" aria-modal="true" aria-labelledby="share-title">
+			<div class="modal-heading"><div><p class="eyebrow">DELA VARDAGEN</p><h2 id="share-title">Dela hushåll</h2><p class="modal-description">Dela listor med andra Formkurva-konton. Varje person behöver ett eget konto.</p></div><button class="quiet-button close-button" data-action="close-share" type="button" aria-label="Stäng">×</button></div>
+			<div id="share-content"></div>
+		</section>
+	</div>
+
+	<div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

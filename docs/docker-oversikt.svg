@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="430" viewBox="0 0 1000 430" role="img" aria-labelledby="title description">
+  <title id="title">Formkurva och Hem &amp; vardag i Docker</title>
+  <desc id="description">Webbläsare når Formkurvas webbapp, inklusive Hem &amp; vardag. Webbappen sparar konto- och hushållsdata i PostgreSQL. En separat backup-tjänst tar dagliga databaskopior.</desc>
+  <defs>
+    <style>
+      .bg{fill:#f8f7f1}.panel{fill:#fffefa;stroke:#e5e5dc;stroke-width:2}.app{fill:#173b32}.db{fill:#e3eee3;stroke:#9ab79c;stroke-width:2}.backup{fill:#fae6d9;stroke:#e5b89d;stroke-width:2}.text{font:600 18px Arial,sans-serif;fill:#23382f}.small{font:14px Arial,sans-serif;fill:#53665a}.light{fill:#fffefa}.arrow{stroke:#718c70;stroke-width:3;fill:none;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#718c70"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1000" height="430" rx="22"/>
+  <text class="text" x="40" y="48">En installation — separata sidor, samma konto och Docker-stack</text>
+  <rect class="panel" x="40" y="155" width="185" height="110" rx="16"/>
+  <text class="text" x="66" y="196">Webbläsare</text>
+  <text class="small" x="66" y="224">Formkurva-konto</text>
+  <text class="small" x="66" y="247">Hem &amp; vardag</text>
+  <rect class="app" x="350" y="115" width="300" height="190" rx="18"/>
+  <text class="text light" x="390" y="159">Docker: webbappen</text>
+  <text class="small light" x="390" y="195">Formkurva · port 3000</text>
+  <text class="small light" x="390" y="225">/vardag.html · inloggning</text>
+  <text class="small light" x="390" y="255">Hem &amp; vardag · konto-API</text>
+  <rect class="db" x="775" y="105" width="185" height="110" rx="16"/>
+  <text class="text" x="800" y="147">PostgreSQL</text>
+  <text class="small" x="800" y="176">Konton och listor</text>
+  <rect class="backup" x="775" y="245" width="185" height="110" rx="16"/>
+  <text class="text" x="800" y="287">Backup-tjänst</text>
+  <text class="small" x="800" y="316">Daglig DB-kopia</text>
+  <path class="arrow" d="M225 210 H340"/>
+  <path class="arrow" d="M650 175 H765"/>
+  <path class="arrow" d="M868 220 V235"/>
+  <text class="small" x="40" y="390">Docker Compose startar webbapp + databas och hjälptjänster. Datan ligger kvar i Docker-volymer.</text>
+</svg>

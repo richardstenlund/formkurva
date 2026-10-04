@@ -11,6 +11,7 @@ const secureCookies = process.env.SECURE_COOKIES === 'true';
 const loginWindowMs = 15 * 60 * 1000;
 const registerAttempts = new Map();
 const loginAttempts = new Map();
+const householdJoinAttempts = new Map();
 const pool = new Pool({
   host: process.env.DB_HOST || 'db',
   port: Number(process.env.DB_PORT || 5432),
@@ -164,6 +165,30 @@ async function initDatabase() {
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   )`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_progress_photos_user_date ON progress_photos (user_id, date)`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS household_data (
+    user_id INTEGER PRIMARY KEY,
+    data_json TEXT NOT NULL DEFAULT '{}',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS household_spaces (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(80) NOT NULL,
+    invite_code VARCHAR(12) NOT NULL UNIQUE,
+    owner_id INTEGER NOT NULL UNIQUE,
+    data_json TEXT NOT NULL DEFAULT '{}',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS household_members (
+    household_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL UNIQUE,
+    role VARCHAR(10) NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'member')),
+    joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (household_id, user_id),
+    FOREIGN KEY (household_id) REFERENCES household_spaces(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
   await pool.query(`CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
@@ -296,7 +321,7 @@ app.get('/formkurva.css', (req, res, next) => {
   });
 });
 app.get('/fomkurva.css', (req, res) => res.redirect(301, '/formkurva.css'));
-const publicFiles = new Set(['MyHome.html', 'admin.html', 'reset-password.html', 'formkurva.css', 'chrome.js', 'sw.js', 'manifest.webmanifest']);
+const publicFiles = new Set(['MyHome.html', 'admin.html', 'reset-password.html', 'formkurva.css', 'chrome.js', 'sw.js', 'manifest.webmanifest', 'vardag.html', 'vardag.css', 'vardag.js']);
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'MyHome.html')));
 app.get('/:file', (req, res, next) => {
   if (!publicFiles.has(req.params.file)) return next();
@@ -331,6 +356,141 @@ app.get('/api/me', async (req, res, next) => {
     }
     res.json(body);
   } catch (error) { next(error); }
+});
+function mergeHouseholdData(primary, secondary) {
+  const merged = { ...primary };
+  for (const [key, items] of Object.entries(secondary)) {
+    if (!Array.isArray(items)) continue;
+    const byId = new Map();
+    for (const item of [...(Array.isArray(merged[key]) ? merged[key] : []), ...items]) {
+      if (item && typeof item === 'object' && typeof item.id === 'string') byId.set(item.id, item);
+    }
+    merged[key] = [...byId.values()];
+  }
+  return merged;
+}
+app.get('/api/household', requireUser, async (req, res, next) => {
+  try {
+    const { rows: [membership] } = await pool.query(
+      `SELECT h.id, h.name, h.invite_code, h.owner_id, h.data_json, m.role
+       FROM household_members m JOIN household_spaces h ON h.id = m.household_id
+       WHERE m.user_id = $1`, [req.user.id]);
+    if (!membership) {
+      const { rows } = await pool.query('SELECT data_json FROM household_data WHERE user_id = $1', [req.user.id]);
+      return res.json({ data: rows[0] ? JSON.parse(rows[0].data_json) : null, household: null });
+    }
+    const { rows: members } = await pool.query(
+      'SELECT u.email, m.role FROM household_members m JOIN users u ON u.id = m.user_id WHERE m.household_id = $1 ORDER BY m.joined_at',
+      [membership.id]);
+    res.json({
+      data: JSON.parse(membership.data_json),
+      household: {
+        name: membership.name,
+        inviteCode: membership.role === 'owner' ? membership.invite_code : '',
+        role: membership.role,
+        members
+      }
+    });
+  } catch (error) { next(error); }
+});
+app.put('/api/household', requireUser, async (req, res, next) => {
+  try {
+    const data = req.body?.data;
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      return res.status(400).json({ error: 'Hushållsdata har ett ogiltigt format.' });
+    }
+    const dataJson = JSON.stringify(data);
+    if (Buffer.byteLength(dataJson, 'utf8') > 1024 * 1024) {
+      return res.status(413).json({ error: 'Dina listor är för stora för att sparas.' });
+    }
+    const { rows: [membership] } = await pool.query('SELECT household_id FROM household_members WHERE user_id = $1', [req.user.id]);
+    if (membership) {
+      await pool.query('UPDATE household_spaces SET data_json = $1, updated_at = NOW() WHERE id = $2', [dataJson, membership.household_id]);
+    } else {
+      await pool.query(
+        `INSERT INTO household_data (user_id, data_json, updated_at) VALUES ($1, $2, NOW())
+         ON CONFLICT (user_id) DO UPDATE SET data_json = EXCLUDED.data_json, updated_at = NOW()`,
+        [req.user.id, dataJson]
+      );
+    }
+    res.json({ saved: true });
+  } catch (error) { next(error); }
+});
+app.post('/api/household/create', requireUser, async (req, res, next) => {
+  let client;
+  try {
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const { rows: [existing] } = await client.query(
+      `SELECT h.name, h.invite_code, h.data_json, m.role
+       FROM household_members m JOIN household_spaces h ON h.id = m.household_id
+       WHERE m.user_id = $1 FOR UPDATE OF h`, [req.user.id]);
+    if (existing) {
+      await client.query('COMMIT');
+      return res.status(409).json({ error: 'Du tillhör redan ett hushåll.' });
+    }
+    const { rows: [personal] } = await client.query('SELECT data_json FROM household_data WHERE user_id = $1 FOR UPDATE', [req.user.id]);
+    const name = String(req.body?.name || 'Mitt hushåll').trim().slice(0, 80) || 'Mitt hushåll';
+    const code = crypto.randomBytes(6).toString('hex').toUpperCase();
+    const { rows: [household] } = await client.query(
+      'INSERT INTO household_spaces (name, invite_code, owner_id, data_json) VALUES ($1, $2, $3, $4) RETURNING id, name, invite_code, data_json',
+      [name, code, req.user.id, personal?.data_json || '{}']);
+    await client.query("INSERT INTO household_members (household_id, user_id, role) VALUES ($1, $2, 'owner')", [household.id, req.user.id]);
+    await client.query('DELETE FROM household_data WHERE user_id = $1', [req.user.id]);
+    await client.query('COMMIT');
+    res.status(201).json({ data: JSON.parse(household.data_json), household: { name: household.name, inviteCode: household.invite_code, role: 'owner', members: [{ email: req.user.email, role: 'owner' }] } });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    next(error);
+  } finally { client?.release(); }
+});
+app.post('/api/household/join', requireUser, async (req, res, next) => {
+  let client;
+  try {
+    const attempt = householdJoinAttempts.get(req.user.id) || { count: 0, started: Date.now() };
+    if (Date.now() - attempt.started > 15 * 60 * 1000) { attempt.count = 0; attempt.started = Date.now(); }
+    if (attempt.count >= 10) return res.status(429).json({ error: 'För många försök att ansluta. Vänta 15 minuter.' });
+    attempt.count += 1;
+    householdJoinAttempts.set(req.user.id, attempt);
+    const code = String(req.body?.code || '').trim().toUpperCase();
+    if (!/^[0-9A-F]{12}$/.test(code)) return res.status(400).json({ error: 'Ange en giltig hushållskod med 12 tecken.' });
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const { rows: [existing] } = await client.query('SELECT household_id FROM household_members WHERE user_id = $1 FOR UPDATE', [req.user.id]);
+    if (existing) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Du tillhör redan ett hushåll.' });
+    }
+    const { rows: [household] } = await client.query('SELECT * FROM household_spaces WHERE invite_code = $1 FOR UPDATE', [code]);
+    if (!household) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Hushållskoden hittades inte.' });
+    }
+    const { rows: [size] } = await client.query('SELECT COUNT(*) FROM household_members WHERE household_id = $1', [household.id]);
+    if (Number(size.count) >= 10) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Hushållet har nått maxgränsen på 10 personer.' });
+    }
+    const { rows: [personal] } = await client.query('SELECT data_json FROM household_data WHERE user_id = $1 FOR UPDATE', [req.user.id]);
+    const joinedData = personal ? mergeHouseholdData(JSON.parse(household.data_json), JSON.parse(personal.data_json)) : JSON.parse(household.data_json);
+    const dataJson = JSON.stringify(joinedData);
+    if (Buffer.byteLength(dataJson, 'utf8') > 1024 * 1024) {
+      await client.query('ROLLBACK');
+      return res.status(413).json({ error: 'Listorna är för stora för att delas.' });
+    }
+    await client.query("INSERT INTO household_members (household_id, user_id, role) VALUES ($1, $2, 'member')", [household.id, req.user.id]);
+    await client.query('UPDATE household_spaces SET data_json = $1, updated_at = NOW() WHERE id = $2', [dataJson, household.id]);
+    if (personal) await client.query('DELETE FROM household_data WHERE user_id = $1', [req.user.id]);
+    const { rows: members } = await client.query(
+      'SELECT u.email, m.role FROM household_members m JOIN users u ON u.id = m.user_id WHERE m.household_id = $1 ORDER BY m.joined_at',
+      [household.id]);
+    householdJoinAttempts.delete(req.user.id);
+    await client.query('COMMIT');
+    res.status(200).json({ data: joinedData, household: { name: household.name, inviteCode: '', role: 'member', members } });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    next(error);
+  } finally { client?.release(); }
 });
 app.post('/api/auth/register', async (req, res, next) => {
   try {
@@ -911,7 +1071,7 @@ app.post('/api/groups', requireUser, async (req, res, next) => {
     if (!name) return res.status(400).json({ error: 'Ange ett namn på gruppen.' });
     const { rows: [count] } = await pool.query('SELECT COUNT(*) FROM group_members WHERE user_id = $1', [req.user.id]);
     if (Number(count.count) >= 10) return res.status(409).json({ error: 'Du kan max vara med i 10 grupper.' });
-    const code = crypto.randomBytes(4).toString('hex').toUpperCase();
+    const code = crypto.randomBytes(6).toString('hex').toUpperCase();
     const { rows: [group] } = await pool.query('INSERT INTO groups (name, code, owner_id) VALUES ($1, $2, $3) RETURNING id', [name, code, req.user.id]);
     await pool.query('INSERT INTO group_members (group_id, user_id) VALUES ($1, $2)', [group.id, req.user.id]);
     res.status(201).json({ id: group.id, code });

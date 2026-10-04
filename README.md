@@ -46,7 +46,46 @@ När det är klart visas adressen och en engångsinloggning (installationskonto)
 - **Historik:** bläddra månad för månad eller år för år med sammanfattning, milstolpar och kalender, och skapa en delbar årsbild.
 - **Kost och framsteg:** måltider med kalorier och makron, vattenlogg, kalori- och proteinmål och privata framstegsbilder med före/efter.
 - **Community:** vänner, peppning, topplistor, utmaningar, månadssäsonger, grupper med chatt och notiser. Kroppsmått, kost, bilder och e-post delas aldrig, och du kan dölja dig helt.
+- **Hem & vardag:** en separat del för veckans måltider, recept med ingredienser, återkommande sysslor, räkningar, ärenden, djurprofiler, hemunderhåll, inköp, inventarie och packlistor.
+- **Hushållsdelning:** dela hushållets listor mellan upp till 10 inloggade konton med en inbjudningskod. Privata listor följer med när ett hushåll skapas eller ansluts.
+- **Kalender och påminnelser:** kalendern samlar datum från sysslor, måltider, räkningar, uppgifter och andra listor. Webbläsaraviseringar gäller den här enheten när sidan är öppen.
+- **Budget och dokument:** registrera hushållsutgifter och betalda räkningar per månad, och spara länkar till manualer och avtal.
+- **Checklistmallar:** starta snabbt med färdiga listor för veckostädning, flytt, resa och veckohandling. Inventariets låga nivåer och utgångsdatum kan användas för smartare inköpsplanering.
 - **Konton:** inloggning med e-post, glömt lösenord, egen JSON-backup (Profil) och en adminsida (`/admin.html`) för konton och roller.
+
+## Hem & vardag
+
+Hem & vardag är en egen sida på `/vardag.html` i samma Formkurva-installation. Den använder Formkurvas befintliga inloggning, användare, Docker-webbapp och PostgreSQL-databas; du behöver inte bygga en separat server eller skapa nya användarkonton. Listorna delas inte automatiskt med alla användare: skapa ett hushåll och bjud in utvalda Formkurva-konton med en kod.
+
+![Hem & vardag – startsida](docs/hem-vardag.png)
+
+Här kan du samla:
+
+- vardagsuppgifter och sysslor som upprepas dagligen, veckovis eller månadsvis,
+- veckans måltider och recept med separata ingredienser; lägg måltider i planen eller omvandla ingredienser till inköp,
+- skafferi, kyl och frys, städ- och badrumsartiklar, verktyg, förråd och djurmat,
+- mängd hemma, enhet, var saken finns, påfyllningsnivå och bäst före-datum,
+- individuella djurprofiler med artanpassade skötselråd, mat, rutiner, allergier och vårddatum,
+- hemunderhåll som filterbyten, brandvarnare, vitvaror, service och trädgård,
+- räkningar med belopp, förfallodatum och återkommande betalningar,
+- viktiga kontakter, modell- och serienummer, garantier, anteckningar, packlistor och ärenden.
+
+När en inventarievara hamnar under sin påfyllningsnivå kan du lägga den direkt på inköpslistan. Ingredienser från recept kan också läggas till som inköp. Saker som snart passerar bäst före visas på översikten. **Backup** laddar ned en JSON-kopia, och **Återställ** slår ihop en tidigare kopia med innehållet som redan finns.
+
+Listor fungerar direkt och sparas då i webbläsaren på den enheten. Logga in med ditt Formkurva-konto för att spara dem i PostgreSQL och komma åt dem på andra enheter. Återkommande betalningar och sysslor flyttar förfallodatumet när du markerar dem som klara. Databastabellen skapas automatiskt när appen startar; befintliga data påverkas inte.
+
+För att dela: logga in, välj **Dela hushåll**, skapa ett hushåll och skicka inbjudningskoden till de andra. De behöver logga in eller skapa varsitt Formkurva-konto och ansluta med koden. Delade listor synkas automatiskt mellan öppna sidor. Kalenderpåminnelser är lokala webbläsaraviseringar, inte pushnotiser; sidan måste vara öppen och aviseringar tillåtna. Budgeten summerar utgifter som du själv registrerat samt räkningar markerade som betalda. Dokumentdelen sparar länkar och anteckningar, inte uppladdade filer.
+
+### Uppdatera Docker-installationen
+
+Hämta den senaste versionen och bygg om webbappen från projektmappen:
+
+```bash
+git pull --ff-only
+docker compose up -d --build
+```
+
+Öppna sedan `http://SERVERNS-IP:3000/vardag.html` eller välj **Hem & vardag** i sidomenyn. Listor kopplade till kontot ligger i PostgreSQL-volymen och ingår därmed i databasens vanliga säkerhetskopiering.
 
 ## Systemkrav
 
@@ -58,6 +97,18 @@ När det är klart visas adressen och en engångsinloggning (installationskonto)
 ## Installation steg för steg
 
 Alla kommandon körs på servern, via SSH eller konsolen. Exemplen utgår från Debian/Ubuntu.
+
+### Vad behövs?
+
+- En server eller dator som kan vara på när sidan ska användas: Debian 12, Ubuntu 22.04/24.04, Raspberry Pi 4/5 eller en Proxmox-VM/LXC med Docker-stöd.
+- Docker Engine och Docker Compose v2, samt Git. Snabbinstallationen nedan installerar dem på Debian/Ubuntu.
+- Minst 1 GB RAM (2 GB rekommenderas) och cirka 5 GB ledigt diskutrymme.
+- Nätverksport 3000 till webbsidan. Port 8081 behövs bara om du vill använda Adminer; exponera inte den porten publikt.
+- Internet vid installation och uppdatering. Ingen domän behövs för användning hemma.
+
+Webbappen körs i en Docker-container och PostgreSQL i en separat container så att databasen får en egen beständig volym. Compose-filen startar även en valfri databasadministrationstjänst och en automatisk backup-tjänst. Både Formkurva och Hem & vardag använder samma inloggning och konton.
+
+![Översikt över Docker-containrar och dataflöde](docs/docker-oversikt.svg)
 
 <details>
 <summary>Installera Git och Docker för hand (behövs inte med snabbinstallationen)</summary>
