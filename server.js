@@ -98,6 +98,37 @@ async function initDatabase() {
     UNIQUE (from_user, to_user, kind, cheer_date)
   )`);
   await pool.query('CREATE INDEX IF NOT EXISTS idx_cheers_to_user ON cheers (to_user, created_at DESC)');
+  await pool.query("ALTER TABLE cheers ADD COLUMN IF NOT EXISTS message VARCHAR(140) NOT NULL DEFAULT ''");
+  await pool.query(`CREATE TABLE IF NOT EXISTS challenges (
+    id SERIAL PRIMARY KEY,
+    challenger_id INTEGER NOT NULL,
+    opponent_id INTEGER NOT NULL,
+    metric VARCHAR(12) NOT NULL,
+    days INTEGER NOT NULL,
+    status VARCHAR(10) NOT NULL DEFAULT 'pending',
+    start_date DATE,
+    end_date DATE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (challenger_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (opponent_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_challenges_users ON challenges (challenger_id, opponent_id)');
+  await pool.query(`CREATE TABLE IF NOT EXISTS groups (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(40) NOT NULL,
+    code CHAR(8) NOT NULL UNIQUE,
+    owner_id INTEGER NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS group_members (
+    group_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (group_id, user_id),
+    FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
   await pool.query(`CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
@@ -646,9 +677,10 @@ app.post('/api/cheers', requireUser, async (req, res, next) => {
   try {
     const toUserId = Number(req.body?.toUserId) || 0;
     const kind = String(req.body?.kind || '');
+    const message = String(req.body?.message || '').replace(/\s+/g, ' ').trim().slice(0, 140);
     if (!cheerKinds.has(kind) || toUserId === req.user.id) return res.status(400).json({ error: 'Ogiltig hälsning.' });
     if (!(await acceptedFriendIds(req.user.id)).includes(toUserId)) return res.status(403).json({ error: 'Du kan bara skicka hälsningar till vänner.' });
-    const result = await pool.query('INSERT INTO cheers (from_user, to_user, kind) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [req.user.id, toUserId, kind]);
+    const result = await pool.query('INSERT INTO cheers (from_user, to_user, kind, message) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING', [req.user.id, toUserId, kind, message]);
     if (!result.rowCount) return res.status(409).json({ error: 'Du har redan skickat den hälsningen idag.' });
     res.status(201).json({ ok: true });
   } catch (error) { next(error); }
@@ -656,11 +688,11 @@ app.post('/api/cheers', requireUser, async (req, res, next) => {
 app.get('/api/cheers', requireUser, async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      `SELECT c.kind, c.created_at, ${nameSql} AS name, c.from_user FROM cheers c JOIN users u ON u.id = c.from_user
+      `SELECT c.kind, c.message, c.created_at, ${nameSql} AS name, c.from_user FROM cheers c JOIN users u ON u.id = c.from_user
        WHERE c.to_user = $1 ORDER BY c.created_at DESC LIMIT 15`, [req.user.id]);
     const { rows: [counts] } = await pool.query('SELECT COUNT(*) FILTER (WHERE from_user = $1) AS sent, COUNT(*) FILTER (WHERE to_user = $1) AS received FROM cheers WHERE from_user = $1 OR to_user = $1', [req.user.id]);
     const friends = (await acceptedFriendIds(req.user.id)).length;
-    res.json({ stats: { sent: Number(counts.sent), received: Number(counts.received), friends }, cheers: rows.map(row => ({ kind: row.kind, name: row.name, fromUserId: row.from_user, createdAt: row.created_at })) });
+    res.json({ stats: { sent: Number(counts.sent), received: Number(counts.received), friends }, cheers: rows.map(row => ({ kind: row.kind, message: row.message, name: row.name, fromUserId: row.from_user, createdAt: row.created_at })) });
   } catch (error) { next(error); }
 });
 app.get('/api/leaderboard', requireUser, async (req, res, next) => {
@@ -709,16 +741,147 @@ app.get('/api/activity', requireUser, async (req, res, next) => {
   try {
     const ids = [req.user.id, ...await acceptedFriendIds(req.user.id)];
     const { rows } = await pool.query(
-      `SELECT c.kind, c.created_at, c.from_user, c.to_user, ${nameSql} AS from_name,
+      `SELECT c.kind, c.message, c.created_at, c.from_user, c.to_user, ${nameSql} AS from_name,
               COALESCE(NULLIF(TRIM((t.profile_json::jsonb)->>'name'), ''), 'Användare #' || t.id) AS to_name
        FROM cheers c JOIN users u ON u.id = c.from_user JOIN users t ON t.id = c.to_user
        WHERE c.from_user = ANY($1::int[]) AND c.to_user = ANY($1::int[])
        ORDER BY c.created_at DESC LIMIT 30`, [ids]);
     res.json({ items: rows.map(row => ({
-      kind: row.kind, createdAt: row.created_at,
+      kind: row.kind, message: row.message, createdAt: row.created_at,
       fromUserId: row.from_user, fromName: row.from_name, toUserId: row.to_user, toName: row.to_name,
       fromMe: row.from_user === req.user.id, toMe: row.to_user === req.user.id
     })) });
+  } catch (error) { next(error); }
+});
+const challengeMetrics = new Set(['workouts', 'days', 'cardioKm', 'volume']);
+function challengeScore(rows, from, to, metric) {
+  return summarize(rows.filter(row => dateOf(row) >= from && dateOf(row) <= to))[metric];
+}
+app.get('/api/challenges', requireUser, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT ch.id, ch.metric, ch.days, ch.status, ch.start_date, ch.end_date, ch.challenger_id, ch.opponent_id,
+              ${nameSql} AS other_name, u.id AS other_id
+       FROM challenges ch JOIN users u ON u.id = CASE WHEN ch.challenger_id = $1 THEN ch.opponent_id ELSE ch.challenger_id END
+       WHERE ch.challenger_id = $1 OR ch.opponent_id = $1 ORDER BY ch.created_at DESC LIMIT 30`, [req.user.id]);
+    const ids = [...new Set([req.user.id, ...rows.map(row => row.other_id)])];
+    const grouped = await loadWorkoutRows(ids);
+    const today = isoDay(new Date());
+    res.json({ challenges: rows.map(row => {
+      const item = { id: row.id, metric: row.metric, days: row.days, status: row.status, otherId: row.other_id, otherName: row.other_name, incoming: row.opponent_id === req.user.id };
+      if (row.status === 'active') {
+        const from = dateOf({ date: row.start_date });
+        const to = dateOf({ date: row.end_date });
+        item.startDate = from; item.endDate = to;
+        item.me = challengeScore(grouped.get(req.user.id) || [], from, to, row.metric);
+        item.them = challengeScore(grouped.get(row.other_id) || [], from, to, row.metric);
+        item.finished = to < today;
+        item.result = !item.finished ? 'ongoing' : item.me > item.them ? 'won' : item.me < item.them ? 'lost' : 'draw';
+      }
+      return item;
+    }) });
+  } catch (error) { next(error); }
+});
+app.post('/api/challenges', requireUser, async (req, res, next) => {
+  try {
+    const opponentId = Number(req.body?.userId) || 0;
+    const metric = String(req.body?.metric || '');
+    const days = [3, 7, 14, 30].includes(Number(req.body?.days)) ? Number(req.body.days) : 0;
+    if (!challengeMetrics.has(metric) || !days) return res.status(400).json({ error: 'Välj mått och längd för utmaningen.' });
+    if (!(await acceptedFriendIds(req.user.id)).includes(opponentId)) return res.status(403).json({ error: 'Du kan bara utmana vänner.' });
+    const { rows: [open] } = await pool.query("SELECT COUNT(*) FROM challenges WHERE (challenger_id = $1 OR opponent_id = $1) AND (status = 'pending' OR (status = 'active' AND end_date >= CURRENT_DATE))", [req.user.id]);
+    if (Number(open.count) >= 10) return res.status(409).json({ error: 'Du har redan 10 pågående utmaningar.' });
+    await pool.query('INSERT INTO challenges (challenger_id, opponent_id, metric, days) VALUES ($1, $2, $3, $4)', [req.user.id, opponentId, metric, days]);
+    res.status(201).json({ ok: true });
+  } catch (error) { next(error); }
+});
+app.post('/api/challenges/:id/accept', requireUser, async (req, res, next) => {
+  try {
+    const result = await pool.query("UPDATE challenges SET status = 'active', start_date = CURRENT_DATE, end_date = CURRENT_DATE + (days - 1) WHERE id = $1 AND opponent_id = $2 AND status = 'pending'", [Number(req.params.id) || 0, req.user.id]);
+    if (!result.rowCount) return res.status(404).json({ error: 'Utmaningen hittades inte.' });
+    res.status(204).end();
+  } catch (error) { next(error); }
+});
+app.delete('/api/challenges/:id', requireUser, async (req, res, next) => {
+  try {
+    await pool.query('DELETE FROM challenges WHERE id = $1 AND (challenger_id = $2 OR opponent_id = $2)', [Number(req.params.id) || 0, req.user.id]);
+    res.status(204).end();
+  } catch (error) { next(error); }
+});
+async function groupSummary(group, userId) {
+  const { rows: members } = await pool.query(`SELECT u.id, ${nameSql} AS name FROM group_members gm JOIN users u ON u.id = gm.user_id WHERE gm.group_id = $1`, [group.id]);
+  const grouped = await loadWorkoutRows(members.map(member => member.id));
+  const since = weekStart();
+  return {
+    id: group.id, name: group.name, isOwner: group.owner_id === userId,
+    code: group.owner_id === userId ? group.code.trim() : undefined,
+    members: members.map(member => {
+      const rows = grouped.get(member.id) || [];
+      return { userId: member.id, name: member.name, isMe: member.id === userId, ...summarize(rows, since), streak: currentStreak(rows) };
+    }).sort((a, b) => b.workouts - a.workouts || b.days - a.days || a.name.localeCompare(b.name, 'sv'))
+  };
+}
+app.get('/api/groups', requireUser, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query('SELECT g.* FROM groups g JOIN group_members gm ON gm.group_id = g.id WHERE gm.user_id = $1 ORDER BY g.created_at', [req.user.id]);
+    res.json({ groups: await Promise.all(rows.map(group => groupSummary(group, req.user.id))) });
+  } catch (error) { next(error); }
+});
+app.post('/api/groups', requireUser, async (req, res, next) => {
+  try {
+    const name = String(req.body?.name || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+    if (!name) return res.status(400).json({ error: 'Ange ett namn på gruppen.' });
+    const { rows: [count] } = await pool.query('SELECT COUNT(*) FROM group_members WHERE user_id = $1', [req.user.id]);
+    if (Number(count.count) >= 10) return res.status(409).json({ error: 'Du kan max vara med i 10 grupper.' });
+    const code = crypto.randomBytes(4).toString('hex').toUpperCase();
+    const { rows: [group] } = await pool.query('INSERT INTO groups (name, code, owner_id) VALUES ($1, $2, $3) RETURNING id', [name, code, req.user.id]);
+    await pool.query('INSERT INTO group_members (group_id, user_id) VALUES ($1, $2)', [group.id, req.user.id]);
+    res.status(201).json({ id: group.id, code });
+  } catch (error) { next(error); }
+});
+app.post('/api/groups/join', requireUser, async (req, res, next) => {
+  try {
+    const code = String(req.body?.code || '').trim().toUpperCase();
+    const { rows: [group] } = /^[0-9A-F]{8}$/.test(code) ? await pool.query('SELECT * FROM groups WHERE code = $1', [code]) : { rows: [] };
+    if (!group) return res.status(404).json({ error: 'Ingen grupp hittades med den koden.' });
+    const { rows: [size] } = await pool.query('SELECT COUNT(*) FROM group_members WHERE group_id = $1', [group.id]);
+    const { rows: [mine] } = await pool.query('SELECT COUNT(*) FROM group_members WHERE user_id = $1', [req.user.id]);
+    if (Number(size.count) >= 20) return res.status(409).json({ error: 'Gruppen är full (max 20 medlemmar).' });
+    if (Number(mine.count) >= 10) return res.status(409).json({ error: 'Du kan max vara med i 10 grupper.' });
+    await pool.query('INSERT INTO group_members (group_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [group.id, req.user.id]);
+    res.status(201).json({ name: group.name });
+  } catch (error) { next(error); }
+});
+app.delete('/api/groups/:id', requireUser, async (req, res, next) => {
+  try {
+    const id = Number(req.params.id) || 0;
+    const { rows: [group] } = await pool.query('SELECT owner_id FROM groups WHERE id = $1', [id]);
+    if (group?.owner_id === req.user.id) await pool.query('DELETE FROM groups WHERE id = $1', [id]);
+    else await pool.query('DELETE FROM group_members WHERE group_id = $1 AND user_id = $2', [id, req.user.id]);
+    res.status(204).end();
+  } catch (error) { next(error); }
+});
+app.get('/api/pr-feed', requireUser, async (req, res, next) => {
+  try {
+    const ids = [req.user.id, ...await acceptedFriendIds(req.user.id)];
+    const [{ rows: users }, grouped] = await Promise.all([
+      pool.query(`SELECT u.id, ${nameSql} AS name FROM users u WHERE u.id = ANY($1::int[])`, [ids]),
+      loadWorkoutRows(ids)
+    ]);
+    const cutoff = new Date(); cutoff.setUTCDate(cutoff.getUTCDate() - 14);
+    const since = isoDay(cutoff);
+    const items = [];
+    users.forEach(user => {
+      const best = new Map();
+      [...(grouped.get(user.id) || [])].filter(row => row.workout_type !== 'cardio').reverse().forEach(row => {
+        const key = String(row.exercise).trim().toLowerCase();
+        const weight = Number(row.weight);
+        const previous = best.get(key);
+        if (previous !== undefined && weight > previous && dateOf(row) >= since) items.push({ userId: user.id, name: user.name, isMe: user.id === req.user.id, exercise: String(row.exercise).trim(), weight, previous, date: dateOf(row) });
+        if (previous === undefined || weight > previous) best.set(key, weight);
+      });
+    });
+    res.json({ items: items.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 20) });
   } catch (error) { next(error); }
 });
 app.get('/api/feed', requireUser, async (req, res, next) => {

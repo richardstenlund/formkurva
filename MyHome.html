@@ -82,6 +82,8 @@
 		.nav-count[hidden] { display: none; }
 		.team-bar { height: 14px; border-radius: 999px; background: var(--paper); overflow: hidden; margin: 8px 0; }
 		.team-bar > span { display: block; height: 100%; background: var(--ink); }
+		.cheer-message { width: 100%; box-sizing: border-box; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); }
+		.group-box { margin-bottom: 14px; }
 		.leaderboard { list-style: none; margin: 0; padding: 0; }
 		.leaderboard-row { display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid var(--line); font-size: 14px; }
 		.leaderboard-me { background: var(--paper); border-radius: 8px; }
@@ -395,6 +397,9 @@
 				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Sociala medaljer</h2></div></div><div id="social-badges"></div></section>
 				<section class="panel profile-panel" id="friends-section" data-view="community"><div class="panel-heading"><div><h2>Vänner</h2><p class="panel-subtitle">Förfrågningar och dina vänner. Du kan också bjuda in via e-post.</p></div></div><form class="friend-form" id="friend-form"><input type="email" id="friend-email" maxlength="254" placeholder="Vännens e-postadress" required><button class="account-button primary" type="submit">Skicka förfrågan</button></form><div id="friend-requests"></div><div id="friend-list"><div class="empty-state">Logga in för att lägga till vänner.</div></div></section>
 				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Vänflöde</h2></div></div><div id="feed-list"></div></section>
+				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Utmaningar</h2><p class="panel-subtitle">Utmana en vän öppet 1 mot 1. Starta från en väns profil.</p></div></div><div id="challenge-list"></div></section>
+				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Grupper</h2><p class="panel-subtitle">Skapa en grupp och dela koden, eller gå med med en kod. Medlemmar i gruppen ser varandras namn och veckans träning.</p></div></div><form class="friend-form" id="group-create-form"><input type="text" id="group-name" maxlength="40" placeholder="Nytt gruppnamn" required><button class="account-button primary" type="submit">Skapa</button></form><form class="friend-form" id="group-join-form"><input type="text" id="group-code" maxlength="8" placeholder="Gruppkod" required><button class="account-button primary" type="submit">Gå med</button></form><div id="group-list"></div></section>
+				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Nya personbästa</h2><p class="panel-subtitle">Rekord som du och dina vänner slagit de senaste 14 dagarna.</p></div></div><div id="pr-feed"></div></section>
 				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Aktivitet i kretsen</h2><p class="panel-subtitle">Vem som skickat vad till vem bland dig och dina vänner.</p></div></div><div id="activity-list"></div></section>
 				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Mottagna hälsningar</h2></div></div><div id="cheer-list"></div></section>
 
@@ -551,7 +556,7 @@
 		async function refreshCommunity() {
 			if (!serverMode || !currentUser) return;
 			document.getElementById('community-visible').checked = currentProfile.communityVisible !== false;
-			await Promise.all([loadFriends(), loadCommunity(), loadLeaderboard(), loadFeed(), loadCheers(), loadRecords(), loadActivity()]);
+			await Promise.all([loadFriends(), loadCommunity(), loadLeaderboard(), loadFeed(), loadCheers(), loadRecords(), loadActivity(), loadChallenges(), loadGroups(), loadPrFeed()]);
 			if (openProfileId) await showPerson(openProfileId, false);
 		}
 		async function loadFriends() {
@@ -646,7 +651,9 @@
 		}
 		async function sendCheer(userId, kind) {
 			try {
-				await api('/cheers', { method: 'POST', body: JSON.stringify({ toUserId: userId, kind }) });
+				const input = document.getElementById('cheer-message');
+				const message = input && openProfileId === userId ? input.value : '';
+				await api('/cheers', { method: 'POST', body: JSON.stringify({ toUserId: userId, kind, message }) });
 				showToast(`${cheerOptions[kind][0]} Hälsningen skickades!`);
 				loadActivity();
 				if (openProfileId === userId) await showPerson(userId, false);
@@ -699,7 +706,7 @@
 					const [emoji, label] = cheerOptions[item.kind] || ['👍', 'Hälsning'];
 					const from = item.fromMe ? 'Du' : item.fromName;
 					const to = item.toMe ? 'dig' : item.toName;
-					return communityRow(`${emoji} ${from} → ${to}`, `${label} · ${timeAgo(item.createdAt)}`, []);
+					return communityRow(`${emoji} ${from} → ${to}`, `${label}${item.message ? ` – ”${item.message}”` : ''} · ${timeAgo(item.createdAt)}`, []);
 				}) : [emptyState('Ingen aktivitet ännu. Skicka en hälsning till en vän!')]));
 			} catch (error) { handleApiError(error); }
 		}
@@ -709,7 +716,7 @@
 				const data = await api('/cheers');
 				renderSocialBadges(data.stats);
 				updateCheerCount(data.cheers);
-				list.replaceChildren(...(data.cheers.length ? data.cheers.map(item => communityRow(`${cheerOptions[item.kind]?.[0] || '👍'} ${item.name}`, `${cheerOptions[item.kind]?.[1] || 'Hälsning'} · ${new Date(item.createdAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}`, [
+				list.replaceChildren(...(data.cheers.length ? data.cheers.map(item => communityRow(`${cheerOptions[item.kind]?.[0] || '👍'} ${item.name}`, `${cheerOptions[item.kind]?.[1] || 'Hälsning'}${item.message ? ` – ”${item.message}”` : ''} · ${new Date(item.createdAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}`, [
 					actionButton('Svara 👏', () => sendCheer(item.fromUserId, 'clap'))
 				])) : [emptyState('Inga hälsningar ännu. Träna så kommer det!')]));
 			} catch (error) { handleApiError(error); }
@@ -753,6 +760,8 @@
 				panel.append(header, stats);
 				if (!data.isSelf && data.level === 'friend') {
 					const cheerBar = el('div', 'cheer-bar');
+					const messageInput = el('input'); messageInput.id = 'cheer-message'; messageInput.maxLength = 140; messageInput.placeholder = 'Valfritt meddelande (max 140 tecken)'; messageInput.className = 'cheer-message';
+					panel.append(messageInput);
 					cheerBar.append(el('span', 'cheer-label', 'Skicka en hälsning:'));
 					Object.entries(cheerOptions).forEach(([kind, [emoji, label]]) => {
 						const done = data.cheeredToday.includes(kind);
@@ -762,6 +771,11 @@
 						cheerBar.append(button);
 					});
 					panel.append(cheerBar);
+					const challengeBar = el('div', 'cheer-bar');
+					const metricSelect = el('select'); Object.entries(challengeMetricNames).forEach(([key, label]) => { const option = el('option', '', label); option.value = key; metricSelect.append(option); });
+					const daysSelect = el('select'); [3, 7, 14, 30].forEach(days => { const option = el('option', '', `${days} dagar`); option.value = String(days); daysSelect.append(option); }); daysSelect.value = '7';
+					challengeBar.append(el('span', 'cheer-label', '⚔️ Starta utmaning:'), metricSelect, daysSelect, actionButton('Utmana', () => communityAction(() => api('/challenges', { method: 'POST', body: JSON.stringify({ userId, metric: metricSelect.value, days: Number(daysSelect.value) }) }), 'Utmaningen är skickad.')));
+					panel.append(challengeBar);
 					const mine = data.compare.me;
 					const theirs = data.compare.them;
 					panel.append(el('h4', '', 'Veckans duell – du mot ' + data.name));
@@ -790,7 +804,56 @@
 				if (scroll) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 			} catch (error) { handleApiError(error); }
 		}
-		let communitySearchTimer = 0;
+		const challengeMetricNames = { workouts: 'Flest pass', days: 'Flest träningsdagar', cardioKm: 'Längst distans (kondition)', volume: 'Störst lyftvolym' };
+		function challengeFormat(metric, value) { return metric === 'cardioKm' ? `${value} km` : metric === 'volume' ? `${value.toLocaleString('sv-SE')} kg` : String(value); }
+		async function loadChallenges() {
+			const list = document.getElementById('challenge-list');
+			try {
+				const data = await api('/challenges');
+				list.replaceChildren(...(data.challenges.length ? data.challenges.map(item => {
+					const title = `${challengeMetricNames[item.metric]} · ${item.days} dagar mot ${item.otherName}`;
+					const remove = actionButton(item.status === 'pending' && item.incoming ? 'Avböj' : item.status === 'active' && !item.finished ? 'Avbryt' : 'Ta bort', () => communityAction(() => api(`/challenges/${item.id}`, { method: 'DELETE' })));
+					if (item.status === 'pending') return communityRow(title, item.incoming ? 'Du har blivit utmanad!' : 'Väntar på svar', item.incoming ? [actionButton('Acceptera', () => communityAction(() => api(`/challenges/${item.id}/accept`, { method: 'POST' }), 'Utmaningen har startat!'), 'export-button primary-small'), remove] : [remove]);
+					const result = { ongoing: 'Pågår', won: '🏆 Du vann!', lost: 'Du förlorade den här gången', draw: 'Oavgjort' }[item.result];
+					return communityRow(title, `Du ${challengeFormat(item.metric, item.me)} – ${item.otherName} ${challengeFormat(item.metric, item.them)} · ${result} · ${item.startDate} till ${item.endDate}`, [remove]);
+				}) : [emptyState('Inga utmaningar ännu. Öppna en väns profil och starta en.')]));
+			} catch (error) { handleApiError(error); }
+		}
+		async function loadGroups() {
+			const list = document.getElementById('group-list');
+			try {
+				const data = await api('/groups');
+				list.replaceChildren(...(data.groups.length ? data.groups.map(group => {
+					const box = el('div', 'group-box');
+					const head = communityRow(group.name, group.isOwner ? `Gruppkod: ${group.code}` : `${group.members.length} medlemmar`, [actionButton(group.isOwner ? 'Radera' : 'Lämna', () => { if (confirm(group.isOwner ? 'Radera gruppen för alla?' : 'Lämna gruppen?')) communityAction(() => api(`/groups/${group.id}`, { method: 'DELETE' })); })]);
+					const board = el('ol', 'leaderboard');
+					group.members.forEach((member, index) => {
+						const row = el('li', 'leaderboard-row' + (member.isMe ? ' leaderboard-me' : ''));
+						row.append(el('span', 'leaderboard-place', member.workouts > 0 ? ['🥇', '🥈', '🥉'][index] || String(index + 1) : '–'), el('strong', '', member.isMe ? `${member.name} (du)` : member.name), el('span', 'pr-value', `${member.workouts} pass denna vecka`));
+						board.append(row);
+					});
+					box.append(head, board);
+					return box;
+				}) : [emptyState('Du är inte med i någon grupp ännu.')]));
+			} catch (error) { handleApiError(error); }
+		}
+		async function loadPrFeed() {
+			const list = document.getElementById('pr-feed');
+			try {
+				const data = await api('/pr-feed');
+				list.replaceChildren(...(data.items.length ? data.items.map(item => communityRow(`🏅 ${item.isMe ? 'Du' : item.name} – ${item.exercise}`, `${item.weight} kg (förra rekordet ${item.previous} kg) · ${item.date}`, item.isMe ? [] : [actionButton('🏆 Grattis', () => sendCheer(item.userId, 'congrats'))])) : [emptyState('Inga nya personbästa de senaste 14 dagarna.')]));
+			} catch (error) { handleApiError(error); }
+		}
+		document.getElementById('group-create-form').addEventListener('submit', async event => {
+			event.preventDefault();
+			const input = document.getElementById('group-name');
+			try { const result = await api('/groups', { method: 'POST', body: JSON.stringify({ name: input.value }) }); input.value = ''; showToast(`Gruppen är skapad. Kod: ${result.code}`); await loadGroups(); } catch (error) { handleApiError(error); }
+		});
+		document.getElementById('group-join-form').addEventListener('submit', async event => {
+			event.preventDefault();
+			const input = document.getElementById('group-code');
+			try { const result = await api('/groups/join', { method: 'POST', body: JSON.stringify({ code: input.value }) }); input.value = ''; showToast(`Du är med i ${result.name}.`); await loadGroups(); } catch (error) { handleApiError(error); }
+		});		let communitySearchTimer = 0;
 		document.getElementById('community-search').addEventListener('input', () => { clearTimeout(communitySearchTimer); communitySearchTimer = setTimeout(loadCommunity, 300); });
 		document.getElementById('leaderboard-period').addEventListener('change', loadLeaderboard);
 		document.getElementById('leaderboard-metric').addEventListener('change', renderLeaderboard);
