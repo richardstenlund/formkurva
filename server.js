@@ -121,6 +121,16 @@ async function initDatabase() {
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
   )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS group_messages (
+    id SERIAL PRIMARY KEY,
+    group_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    body VARCHAR(500) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_group_messages_group ON group_messages (group_id, id DESC)');
   await pool.query(`CREATE TABLE IF NOT EXISTS group_members (
     group_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
@@ -882,6 +892,99 @@ app.get('/api/pr-feed', requireUser, async (req, res, next) => {
       });
     });
     res.json({ items: items.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 20) });
+  } catch (error) { next(error); }
+});
+async function requireGroupMember(req, res) {
+  const id = Number(req.params.id) || 0;
+  const { rows } = await pool.query('SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2', [id, req.user.id]);
+  if (!rows.length) { res.status(404).json({ error: 'Gruppen hittades inte.' }); return 0; }
+  return id;
+}
+app.get('/api/groups/:id/messages', requireUser, async (req, res, next) => {
+  try {
+    const id = await requireGroupMember(req, res);
+    if (!id) return;
+    const { rows } = await pool.query(
+      `SELECT * FROM (SELECT m.id, m.body, m.created_at, m.user_id, ${nameSql} AS name FROM group_messages m JOIN users u ON u.id = m.user_id WHERE m.group_id = $1 ORDER BY m.id DESC LIMIT 50) recent ORDER BY id`, [id]);
+    res.json({ messages: rows.map(row => ({ id: row.id, body: row.body, createdAt: row.created_at, userId: row.user_id, name: row.name, isMe: row.user_id === req.user.id })) });
+  } catch (error) { next(error); }
+});
+app.post('/api/groups/:id/messages', requireUser, async (req, res, next) => {
+  try {
+    const id = await requireGroupMember(req, res);
+    if (!id) return;
+    const body = String(req.body?.body || '').replace(/[ \t]+/g, ' ').trim().slice(0, 500);
+    if (!body) return res.status(400).json({ error: 'Skriv ett meddelande.' });
+    const { rows: [recent] } = await pool.query("SELECT COUNT(*) FROM group_messages WHERE user_id = $1 AND created_at > NOW() - INTERVAL '1 minute'", [req.user.id]);
+    if (Number(recent.count) >= 20) return res.status(429).json({ error: 'Du skickar för snabbt. Vänta en stund.' });
+    await pool.query('INSERT INTO group_messages (group_id, user_id, body) VALUES ($1, $2, $3)', [id, req.user.id, body]);
+    res.status(201).json({ ok: true });
+  } catch (error) { next(error); }
+});
+function seasonPoints(rows, from, to) {
+  const list = rows.filter(row => dateOf(row) >= from && dateOf(row) <= to);
+  const sum = summarize(list);
+  const points = sum.workouts * 10 + sum.days * 5 + Math.round(sum.cardioKm * 2) + Math.floor(sum.volume / 1000);
+  return { points, ...sum };
+}
+function monthRange(offset) {
+  const now = new Date();
+  const first = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset, 1));
+  const last = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset + 1, 0));
+  return { from: isoDay(first), to: isoDay(last), label: first.toLocaleDateString('sv-SE', { month: 'long', year: 'numeric', timeZone: 'UTC' }) };
+}
+app.get('/api/season', requireUser, async (req, res, next) => {
+  try {
+    const ids = [req.user.id, ...await acceptedFriendIds(req.user.id)];
+    const [{ rows: users }, grouped] = await Promise.all([
+      pool.query(`SELECT u.id, ${nameSql} AS name FROM users u WHERE u.id = ANY($1::int[])`, [ids]),
+      loadWorkoutRows(ids)
+    ]);
+    const build = range => users.map(user => ({ userId: user.id, name: user.name, isMe: user.id === req.user.id, ...seasonPoints(grouped.get(user.id) || [], range.from, range.to) }))
+      .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, 'sv'));
+    const current = monthRange(0);
+    const previous = monthRange(-1);
+    const now = new Date();
+    const daysLeft = Math.max(0, Math.round((Date.parse(current.to) - Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())) / 86400000));
+    res.json({ current: { label: current.label, daysLeft, entries: build(current) }, previous: { label: previous.label, entries: build(previous).filter(entry => entry.points > 0) } });
+  } catch (error) { next(error); }
+});
+app.get('/api/notifications', requireUser, async (req, res, next) => {
+  try {
+    const me = req.user.id;
+    const items = [];
+    const [cheers, requests, challenges] = await Promise.all([
+      pool.query(`SELECT c.id, c.kind, c.message, c.created_at, ${nameSql} AS name FROM cheers c JOIN users u ON u.id = c.from_user WHERE c.to_user = $1 ORDER BY c.id DESC LIMIT 10`, [me]),
+      pool.query(`SELECT f.id, ${nameSql} AS name FROM friendships f JOIN users u ON u.id = f.requester_id WHERE f.addressee_id = $1 AND f.status = 'pending'`, [me]),
+      pool.query(`SELECT ch.id, ${nameSql} AS name FROM challenges ch JOIN users u ON u.id = ch.challenger_id WHERE ch.opponent_id = $1 AND ch.status = 'pending'`, [me])
+    ]);
+    cheers.rows.forEach(row => items.push({ key: `cheer:${row.id}`, kind: 'cheer', cheerKind: row.kind, text: `${row.name} skickade en hälsning${row.message ? `: ”${row.message}”` : ''}` }));
+    requests.rows.forEach(row => items.push({ key: `friend:${row.id}`, kind: 'friend', text: `${row.name} vill bli din vän` }));
+    challenges.rows.forEach(row => items.push({ key: `challenge:${row.id}`, kind: 'challenge', text: `${row.name} har utmanat dig` }));
+    const friendIds = await acceptedFriendIds(me);
+    if (friendIds.length) {
+      const [{ rows: users }, grouped] = await Promise.all([
+        pool.query(`SELECT u.id, ${nameSql} AS name FROM users u WHERE u.id = ANY($1::int[])`, [friendIds]),
+        loadWorkoutRows(friendIds)
+      ]);
+      const cutoff = new Date(); cutoff.setUTCDate(cutoff.getUTCDate() - 3);
+      const since = isoDay(cutoff);
+      users.forEach(user => {
+        const best = new Map();
+        [...(grouped.get(user.id) || [])].filter(row => row.workout_type !== 'cardio').reverse().forEach(row => {
+          const key = String(row.exercise).trim().toLowerCase();
+          const weight = Number(row.weight);
+          const previous = best.get(key);
+          if (previous !== undefined && weight > previous && dateOf(row) >= since) items.push({ key: `pr:${user.id}:${key}:${weight}`, kind: 'pr', text: `${user.name} slog personbästa i ${String(row.exercise).trim()}: ${weight} kg` });
+          if (previous === undefined || weight > previous) best.set(key, weight);
+        });
+      });
+    }
+    const { rows: [msg] } = await pool.query(
+      `SELECT g.name, COUNT(*) AS count, MAX(m.id) AS last_id FROM group_messages m JOIN groups g ON g.id = m.group_id
+       WHERE m.user_id <> $1 AND m.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1) AND m.created_at > NOW() - INTERVAL '1 day' GROUP BY g.name ORDER BY MAX(m.id) DESC LIMIT 1`, [me]);
+    if (msg) items.push({ key: `chat:${msg.last_id}`, kind: 'chat', text: `Nytt meddelande i gruppen ${msg.name}` });
+    res.json({ items });
   } catch (error) { next(error); }
 });
 app.get('/api/feed', requireUser, async (req, res, next) => {

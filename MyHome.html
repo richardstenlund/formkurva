@@ -84,6 +84,11 @@
 		.team-bar > span { display: block; height: 100%; background: var(--ink); }
 		.cheer-message { width: 100%; box-sizing: border-box; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); }
 		.group-box { margin-bottom: 14px; }
+		.chat-panel { margin: 8px 0; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
+		.chat-log { max-height: 240px; overflow-y: auto; margin-bottom: 8px; font-size: 13px; }
+		.chat-line { padding: 6px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+		.chat-line small { color: var(--muted); }
+		.chat-me strong { color: var(--ink); }
 		.leaderboard { list-style: none; margin: 0; padding: 0; }
 		.leaderboard-row { display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid var(--line); font-size: 14px; }
 		.leaderboard-me { background: var(--paper); border-radius: 8px; }
@@ -389,7 +394,7 @@
 					<section class="panel feature-panel"><div class="panel-heading"><div><h2>Anteckning & progressbild</h2><p class="panel-subtitle">Spara dagens känsla tillsammans med mätningen.</p></div></div><form class="note-form" id="note-form"><label>Dagens anteckning<textarea name="note" id="daily-note" placeholder="Träning, energi, sömn eller annat..."></textarea></label><label class="photo-drop">Lägg till progressbild<input type="file" id="progress-photo" accept="image/*"><span>Välj en bild från enheten</span></label><img class="photo-preview" id="photo-preview" alt="Förhandsvisning av progressbild"><button class="save-button" type="submit">Spara anteckning <span>→</span></button></form></section>
 				</div>
 
-				<section class="panel profile-panel" id="community-section" data-view="community"><div class="panel-heading"><div><h2>Community</h2><p class="panel-subtitle">Hitta andra Formkurva-användare, bli vänner, skicka peppning och tävla mot varandra. Kroppsmått och e-post delas aldrig.</p></div></div><label class="community-toggle"><input type="checkbox" id="community-visible" checked> Visa mig i communityn (andra kan hitta mig och se mina medaljer). Vänner ser alltid min träning.</label><div class="person-panel" id="person-panel" hidden></div></section>
+				<section class="panel profile-panel" id="community-section" data-view="community"><div class="panel-heading"><div><h2>Community</h2><p class="panel-subtitle">Hitta andra Formkurva-användare, bli vänner, skicka peppning och tävla mot varandra. Kroppsmått och e-post delas aldrig.</p></div></div><label class="community-toggle"><input type="checkbox" id="community-visible" checked> Visa mig i communityn (andra kan hitta mig och se mina medaljer). Vänner ser alltid min träning.</label><button class="export-button" type="button" id="notify-toggle">🔔 Slå på notiser</button><div class="person-panel" id="person-panel" hidden></div></section>
 				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Hitta användare</h2></div></div><div class="friend-form"><input type="search" id="community-search" maxlength="50" placeholder="Sök på namn"></div><div id="community-list"><div class="empty-state">Logga in för att se communityn.</div></div></section>
 				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Tävling</h2><p class="panel-subtitle">Du mot dina vänner.</p></div></div><div class="friend-form"><select id="leaderboard-period"><option value="week">Denna vecka</option><option value="month">Denna månad</option></select><select id="leaderboard-metric"><option value="workouts">Antal pass</option><option value="days">Träningsdagar</option><option value="cardioKm">Distans (kondition)</option><option value="volume">Total lyftvolym</option><option value="streak">Streak</option></select></div><ol class="leaderboard" id="leaderboard-list"></ol></section>
 				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Lagmål</h2><p class="panel-subtitle">Gemensamt mål för dig och dina vänner – ni tränar tillsammans.</p></div></div><div id="team-goal"></div></section>
@@ -399,6 +404,7 @@
 				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Vänflöde</h2></div></div><div id="feed-list"></div></section>
 				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Utmaningar</h2><p class="panel-subtitle">Utmana en vän öppet 1 mot 1. Starta från en väns profil.</p></div></div><div id="challenge-list"></div></section>
 				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Grupper</h2><p class="panel-subtitle">Skapa en grupp och dela koden, eller gå med med en kod. Medlemmar i gruppen ser varandras namn och veckans träning.</p></div></div><form class="friend-form" id="group-create-form"><input type="text" id="group-name" maxlength="40" placeholder="Nytt gruppnamn" required><button class="account-button primary" type="submit">Skapa</button></form><form class="friend-form" id="group-join-form"><input type="text" id="group-code" maxlength="8" placeholder="Gruppkod" required><button class="account-button primary" type="submit">Gå med</button></form><div id="group-list"></div></section>
+				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Säsong</h2><p class="panel-subtitle">Poäng nollställs varje månad: 10 per pass, 5 per träningsdag, 2 per km kondition och 1 per 1 000 kg lyftvolym.</p></div></div><div id="season-box"></div></section>
 				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Nya personbästa</h2><p class="panel-subtitle">Rekord som du och dina vänner slagit de senaste 14 dagarna.</p></div></div><div id="pr-feed"></div></section>
 				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Aktivitet i kretsen</h2><p class="panel-subtitle">Vem som skickat vad till vem bland dig och dina vänner.</p></div></div><div id="activity-list"></div></section>
 				<section class="panel profile-panel" data-view="community"><div class="panel-heading"><div><h2>Mottagna hälsningar</h2></div></div><div id="cheer-list"></div></section>
@@ -513,7 +519,7 @@
 			renderFocusPicker();
 		}
 		function getProfile() { return serverMode ? currentProfile : JSON.parse(localStorage.getItem(profileKey()) || '{}'); }
-		async function loadServerState() { if (!serverMode) return; try { const session = await api('/me'); currentUser = session.user?.email || ''; sessionUserId = session.user?.id || ''; currentRole = session.user?.role || ''; currentProfile = session.user?.profile || {}; if (session.user) { const [measurementResult, workoutResult] = await Promise.all([api('/measurements'), api('/workouts')]); measurements = measurementResult.measurements; workouts = workoutResult.workouts; } else { measurements = []; workouts = []; } updateAccountUi(); applyTheme(); renderProfile(); render(); if (currentRole === 'admin') loadAdminUsers(); refreshCommunity(); } catch (error) { handleApiError(error); } }
+		async function loadServerState() { if (!serverMode) return; try { const session = await api('/me'); currentUser = session.user?.email || ''; sessionUserId = session.user?.id || ''; currentRole = session.user?.role || ''; currentProfile = session.user?.profile || {}; if (session.user) { const [measurementResult, workoutResult] = await Promise.all([api('/measurements'), api('/workouts')]); measurements = measurementResult.measurements; workouts = workoutResult.workouts; } else { measurements = []; workouts = []; } updateAccountUi(); applyTheme(); renderProfile(); render(); if (currentRole === 'admin') loadAdminUsers(); refreshCommunity(); if (session.user) startNotifications(); } catch (error) { handleApiError(error); } }
 		async function loadAdminUsers() { if (!serverMode || currentRole !== 'admin') return; try { const result = await api('/admin/users'); document.getElementById('admin-users').innerHTML = '<table class="admin-table"><thead><tr><th>E-post</th><th>Skapad</th><th>Roll</th></tr></thead><tbody>' + result.users.map(user => '<tr><td>' + user.email + (user.id === Number(sessionUserId) ? ' (du)' : '') + '</td><td>' + new Date(user.created_at).toLocaleDateString('sv-SE') + '</td><td><select class="role-select" data-user-id="' + user.id + '" data-original-role="' + user.role + '"' + (user.id === Number(sessionUserId) ? ' disabled' : '') + '><option value="user"' + (user.role === 'user' ? ' selected' : '') + '>Vanlig användare</option><option value="admin"' + (user.role === 'admin' ? ' selected' : '') + '>Administratör</option></select></td></tr>').join('') + '</tbody></table>'; document.querySelectorAll('.role-select').forEach(select => select.addEventListener('change', changeUserRole)); } catch (error) { document.getElementById('admin-users').innerHTML = '<div class="empty-state">' + error.message + '</div>'; } }
 		let sessionUserId = '';
 		const cheerOptions = { pepp: ['💪', 'Kämpa på!'], clap: ['👏', 'Bra jobbat!'], fire: ['🔥', 'Du är het!'], challenge: ['⚔️', 'Jag utmanar dig!'], congrats: ['🏆', 'Grattis!'], nudge: ['👋', 'Dags att träna!'] };
@@ -556,7 +562,7 @@
 		async function refreshCommunity() {
 			if (!serverMode || !currentUser) return;
 			document.getElementById('community-visible').checked = currentProfile.communityVisible !== false;
-			await Promise.all([loadFriends(), loadCommunity(), loadLeaderboard(), loadFeed(), loadCheers(), loadRecords(), loadActivity(), loadChallenges(), loadGroups(), loadPrFeed()]);
+			await Promise.all([loadFriends(), loadCommunity(), loadLeaderboard(), loadFeed(), loadCheers(), loadRecords(), loadActivity(), loadChallenges(), loadGroups(), loadPrFeed(), loadSeason()]);
 			if (openProfileId) await showPerson(openProfileId, false);
 		}
 		async function loadFriends() {
@@ -833,10 +839,86 @@
 						board.append(row);
 					});
 					box.append(head, board);
+					const chatButton = actionButton(openChats.has(group.id) ? 'Dölj chatt' : '💬 Chatt', () => { if (openChats.has(group.id)) openChats.delete(group.id); else openChats.add(group.id); loadGroups(); });
+					head.querySelector('.friend-row-actions').prepend(chatButton);
+					if (openChats.has(group.id)) box.append(chatPanel(group.id));
 					return box;
 				}) : [emptyState('Du är inte med i någon grupp ännu.')]));
 			} catch (error) { handleApiError(error); }
 		}
+		const openChats = new Set();
+		function chatPanel(groupId) {
+			const panel = el('div', 'chat-panel');
+			const log = el('div', 'chat-log');
+			const form = el('form', 'friend-form');
+			const input = el('input'); input.maxLength = 500; input.placeholder = 'Skriv ett meddelande'; input.required = true;
+			const send = el('button', 'account-button primary', 'Skicka'); send.type = 'submit';
+			form.append(input, send);
+			const load = async () => {
+				try {
+					const data = await api(`/groups/${groupId}/messages`);
+					const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 20;
+					log.replaceChildren(...(data.messages.length ? data.messages.map(message => {
+						const line = el('div', 'chat-line' + (message.isMe ? ' chat-me' : ''));
+						line.append(el('strong', '', message.isMe ? 'Du' : message.name), ' ', el('small', '', timeAgo(message.createdAt)), el('div', '', message.body));
+						return line;
+					}) : [emptyState('Inga meddelanden ännu. Skriv det första!')]));
+					if (atBottom) log.scrollTop = log.scrollHeight;
+				} catch (error) { if (panel.isConnected) handleApiError(error); }
+			};
+			form.addEventListener('submit', async event => {
+				event.preventDefault();
+				try { await api(`/groups/${groupId}/messages`, { method: 'POST', body: JSON.stringify({ body: input.value }) }); input.value = ''; await load(); log.scrollTop = log.scrollHeight; } catch (error) { handleApiError(error); }
+			});
+			panel.append(log, form);
+			load().then(() => { log.scrollTop = log.scrollHeight; });
+			const timer = setInterval(() => { if (!panel.isConnected) clearInterval(timer); else load(); }, 10000);
+			return panel;
+		}
+		async function loadSeason() {
+			const box = document.getElementById('season-box');
+			try {
+				const data = await api('/season');
+				const board = el('ol', 'leaderboard');
+				data.current.entries.forEach((entry, index) => {
+					const row = el('li', 'leaderboard-row' + (entry.isMe ? ' leaderboard-me' : ''));
+					row.append(el('span', 'leaderboard-place', entry.points > 0 ? ['🥇', '🥈', '🥉'][index] || String(index + 1) : '–'), el('strong', '', entry.isMe ? `${entry.name} (du)` : entry.name), el('span', 'pr-value', `${entry.points} p`));
+					board.append(row);
+				});
+				const parts = [el('strong', '', `${data.current.label} – ${data.current.daysLeft} dagar kvar`), board];
+				if (data.current.entries.length < 2) parts.push(emptyState('Lägg till vänner för att tävla om säsongen.'));
+				const winner = data.previous.entries[0];
+				if (winner) parts.push(el('p', 'panel-subtitle', `🏆 ${data.previous.label}: ${winner.isMe ? 'du vann' : winner.name + ' vann'} med ${winner.points} poäng`));
+				box.replaceChildren(...parts);
+			} catch (error) { handleApiError(error); }
+		}
+		let notificationTimer = 0;
+		function notificationSeen() { try { return new Set(JSON.parse(localStorage.getItem('formkurva-notified-' + sessionUserId) || 'null') || []); } catch (error) { return null; } }
+		async function pollNotifications() {
+			if (!serverMode || !currentUser) return;
+			try {
+				const data = await api('/notifications');
+				const stored = localStorage.getItem('formkurva-notified-' + sessionUserId);
+				const seen = notificationSeen() || new Set();
+				const fresh = data.items.filter(item => !seen.has(item.key));
+				if (stored !== null) fresh.slice(0, 3).forEach(item => {
+					showToast(item.text);
+					if ('Notification' in window && Notification.permission === 'granted' && document.hidden) new Notification('Formkurva', { body: item.text });
+				});
+				fresh.forEach(item => seen.add(item.key));
+				localStorage.setItem('formkurva-notified-' + sessionUserId, JSON.stringify([...seen].slice(-200)));
+			} catch (error) { /* tyst: nästa försök görs om en minut */ }
+		}
+		function startNotifications() {
+			if (notificationTimer) return;
+			pollNotifications();
+			notificationTimer = setInterval(pollNotifications, 60000);
+		}
+		document.getElementById('notify-toggle').addEventListener('click', async () => {
+			if (!('Notification' in window)) { showToast('Systemnotiser stöds inte här (kräver https). Du får ändå meddelanden i sidan.'); return; }
+			const permission = await Notification.requestPermission();
+			showToast(permission === 'granted' ? 'Systemnotiser är påslagna när fliken är i bakgrunden.' : 'Systemnotiser är avstängda.');
+		});
 		async function loadPrFeed() {
 			const list = document.getElementById('pr-feed');
 			try {
